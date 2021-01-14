@@ -19,7 +19,7 @@ def tof10120_judgment(dis_L, dis_ML, dis_MR, dis_R):
 
     dis_LR_diff = (dis_L + dis_ML) - (dis_MR + dis_R)
 
-    if dis_L < 200 or dis_ML < 200 or dis_MR < 200 or dis_R < 200:
+    if dis_L < 200 or dis_ML < 200 or dis_MR < 200 or dis_R < 200: #如果任一tof偵測到距離<200mm
         if avoid_alertcnt > 0:
             avoid_alertcnt -= 1
     else:
@@ -43,20 +43,20 @@ def tof10120_judgment(dis_L, dis_ML, dis_MR, dis_R):
             spin_barrier += 1
 
         if spin_barrier >= 4:
-            # 都有障礙，需要原地旋轉
-            if dis_LR_diff < 0:
+            # 四周都有障礙，需要原地旋轉
+            if dis_LR_diff < 0: #左邊有障礙物
                 return AvoidanceAction.SPIN_RIGHT
-            else:
+            else: #右邊有障礙物
                 return AvoidanceAction.SPIN_LEFT
         elif dis_L < 120 or dis_ML < 100 or dis_MR < 100 or dis_R < 120:
-            if dis_LR_diff < 0:
+            if dis_LR_diff < 0: #左邊有障礙物
                 return AvoidanceAction.BACK_RIGHT
-            else:
+            else: #右邊有障礙物
                 return AvoidanceAction.BACK_LEFT
         elif dis_L < 170 or dis_ML < 200 or dis_MR < 200 or dis_R < 170:
-            if dis_LR_diff < 0:
+            if dis_LR_diff < 0: #左邊有障礙物
                 return AvoidanceAction.TURN_RIGHT
-            else:
+            else: #右邊有障礙物
                 return AvoidanceAction.TURN_LEFT
 
     return AvoidanceAction.NORMAL

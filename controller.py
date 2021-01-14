@@ -16,25 +16,40 @@ TOF_L_I2C_ADDRESS = 0x53
 TOF_ML_I2C_ADDRESS = 0x54
 TOF_MR_I2C_ADDRESS = 0x55
 TOF_R_I2C_ADDRESS = 0x56
+TOF_SPIN_ANG = 45
+TOF_BACK_ANG = 30
+TOF_TURN_ANG = 30
 
 WHEEL_DIAM = 12.5
 CAR_TREAD = 33.0
 TURN_AROUND_DIST = (CAR_TREAD * math.pi) / 2
-PPR = 800.0 # pulse/rev
-RPM = 120.0
-STD_DISTANCE = 50.0
+PPR = 800 # pulse/rev
+RPM = 120
+STD_DISTANCE = 50
 MAX_SPEED = (RPM * PPR) / 60
 ACCELER = 800
+TOF_SPEED = MAX_SPEED
+TOF_ACCELER = 1600
+
 ANGLE_FILTER_SDIM = 20
 ANGLE_FILTER_NDIM = 5
-ANGLE_FILTER_SFAIL = 0.2
-ANGLE_FILTER_NFAIL = 0.05
-ANGLE_FILTER_MAXFAIL = 50
+ANGLE_FILTER_SFAIL = 0.2 #計算角度的比例參數 last_angle * (1 - ANGLE_FILTER_SFAIL) + ang * ANGLE_FILTER_SFAIL
+ANGLE_FILTER_NFAIL = 0.05 #計算角度的比例參數 last_angle * (1 - ANGLE_FILTER_NFAIL) + ang * ANGLE_FILTER_NFAIL
+ANGLE_FILTER_MAXFAIL = 50 #
 
-gta_count = 0
-gta_value = 0
-gta_last = 0
-needWaiting = False
+TURNING_ANGLE_PN80 = 0.015
+TURNING_ANGLE_PN70 = 0.05
+TURNING_ANGLE_PN60 = 0.08
+TURNING_ANGLE_PN50 = 0.2
+TURNING_ANGLE_PN40 = 0.25
+TURNING_ANGLE_PN30 = 0.3
+TURNING_ANGLE_PN20 = 0.4
+TURNING_ANGLE_PN8 = 0.7
+
+# gta_count = 0
+# gta_value = 0
+# gta_last = 0
+needWaiting = False #if Running Avoidance?
 avg_count = 0
 avg_last = 0
 avg_sum = 0
@@ -83,27 +98,27 @@ def avg_dist(d):
 
 def ctrl_dir(ang):
     if ang <= -80 or ang >=80:
-        speed_factor = 0.015 #0.04
+        speed_factor = TURNING_ANGLE_PN80
     elif ang <= -70 or ang >= 70:
-        speed_factor = 0.05 #0.08
+        speed_factor = TURNING_ANGLE_PN70
     elif ang <= -60 or ang >= 60:
-        speed_factor = 0.08 #0.15
+        speed_factor = TURNING_ANGLE_PN60
     elif ang <= -50 or ang >= 50:
-        speed_factor = 0.2 #0.25
+        speed_factor = TURNING_ANGLE_PN50
     elif ang <= -40 or ang >= 40:
-        speed_factor = 0.25 #0.4
+        speed_factor = TURNING_ANGLE_PN40
     elif ang <= -30 or ang >= 30:
-        speed_factor = 0.3
+        speed_factor = TURNING_ANGLE_PN30
     elif ang <= -20 or ang >= 20:
-        speed_factor = 0.4
+        speed_factor = TURNING_ANGLE_PN20
     elif ang <= -8 or ang >= 8:
-        speed_factor = 0.7
+        speed_factor = TURNING_ANGLE_PN8
     else:
         speed_factor = 1
 
-    if ang > 0 :
+    if ang > 0 : #人在左邊->左轉
         return {'left':speed_factor, 'right':1.0}
-    else:
+    else: #人在右邊->右轉
         return {'left':1.0, 'right':speed_factor}
 
 def angle_filtering(ang):
@@ -113,26 +128,26 @@ def angle_filtering(ang):
     if last_angle == None:
         last_angle = ang
         return ang
-    same_sign = (last_angle * ang) > 0
+    same_sign = (last_angle * ang) > 0 #bool same_sign 1->同向 0->不同向
     angle_diff = (ang - last_angle)
-    if same_sign:
-        if abs(angle_diff) > ANGLE_FILTER_SDIM:
-            retval = last_angle * (1 - ANGLE_FILTER_SFAIL) + ang * ANGLE_FILTER_SFAIL
-            last_angle_fail += 1
+    if same_sign: #如果兩次讀到的角度方向相同
+        if abs(angle_diff) > ANGLE_FILTER_SDIM: #同相位角度差是否大於最大容許值
+            retval = last_angle * (1 - ANGLE_FILTER_SFAIL) + ang * ANGLE_FILTER_SFAIL #依比例計算return value
+            last_angle_fail += 1 #failed_counter++
         else:
             retval = ang
             last_angle = ang
             last_angle_fail = 0
-    else:
-        if abs(angle_diff) > ANGLE_FILTER_NDIM:
-            retval = last_angle * (1 - ANGLE_FILTER_NFAIL) + ang * ANGLE_FILTER_NFAIL
+    else: #如果兩次讀到的角度方向不同
+        if abs(angle_diff) > ANGLE_FILTER_NDIM: #不同相位角度差是否大於最大容許值
+            retval = last_angle * (1 - ANGLE_FILTER_NFAIL) + ang * ANGLE_FILTER_NFAIL #依比例計算return value
             last_angle_fail += 1
         else:
             retval = ang
             last_angle = ang
-            last_angle_fail = 0
+            last_angle_fail = 0 #failed_counter++
     
-    if last_angle_fail >= ANGLE_FILTER_MAXFAIL:
+    if last_angle_fail >= ANGLE_FILTER_MAXFAIL: 
         retval = ang
         last_angle = ang
 
@@ -145,28 +160,30 @@ def tof_avoid_control(action: AvoidanceAction):
     stp_right.stop()
     stp_left.set_current_steps(0)
     stp_right.set_current_steps(0)
-    if action == AvoidanceAction.SPIN_LEFT or action == AvoidanceAction.SPIN_RIGHT:
-        stp_left.set_target_speed(MAX_SPEED)
-        stp_right.set_target_speed(MAX_SPEED)
-        step_to_spin = int((TURN_AROUND_DIST * 0.25 * PPR) / (WHEEL_DIAM * math.pi))
+    stp_left.set_target_acceleration(TOF_ACCELER)
+    stp_right.set_target_acceleration(TOF_ACCELER)
+    if action == AvoidanceAction.SPIN_LEFT or action == AvoidanceAction.SPIN_RIGHT: #向左自轉or向右自轉 避障
+        stp_left.set_target_speed(TOF_SPEED)
+        stp_right.set_target_speed(TOF_SPEED)
+        step_to_spin = int((TURN_AROUND_DIST * (TOF_SPIN_ANG/180) * PPR) / (WHEEL_DIAM * math.pi))
         if action == AvoidanceAction.SPIN_LEFT:
             stp_left.move(-step_to_spin)
             stp_right.move(step_to_spin)
         else:
             stp_left.move(step_to_spin)
             stp_right.move(-step_to_spin)
-    elif action == AvoidanceAction.BACK_LEFT or action == AvoidanceAction.BACK_RIGHT:
-        stp_left.set_target_speed(MAX_SPEED)
-        stp_right.set_target_speed(MAX_SPEED)
-        step_to_spin = int((TURN_AROUND_DIST / 6 * PPR) / (WHEEL_DIAM * math.pi))
+    elif action == AvoidanceAction.BACK_LEFT or action == AvoidanceAction.BACK_RIGHT: #右輪不動左輪反轉or左輪不動右輪反轉 避障
+        stp_left.set_target_speed(TOF_SPEED)
+        stp_right.set_target_speed(TOF_SPEED)
+        step_to_spin = int((TURN_AROUND_DIST * (TOF_BACK_ANG/180) * PPR) / (WHEEL_DIAM * math.pi))
         if action == AvoidanceAction.BACK_LEFT:
             stp_left.move(-step_to_spin)
         else:
             stp_right.move(-step_to_spin)
-    elif action == AvoidanceAction.TURN_LEFT or action == AvoidanceAction.TURN_RIGHT:
-        stp_left.set_target_speed(MAX_SPEED)
-        stp_right.set_target_speed(MAX_SPEED)
-        step_to_spin = int((TURN_AROUND_DIST / 6 * PPR) / (WHEEL_DIAM * math.pi))
+    elif action == AvoidanceAction.TURN_LEFT or action == AvoidanceAction.TURN_RIGHT: #左輪不動右輪正轉(車體向左轉)or右輪不動左輪正轉(車體向右轉) 避障
+        stp_left.set_target_speed(TOF_SPEED)
+        stp_right.set_target_speed(TOF_SPEED)
+        step_to_spin = int((TURN_AROUND_DIST * (TOF_TURN_ANG/180) * PPR) / (WHEEL_DIAM * math.pi))
         if action == AvoidanceAction.TURN_LEFT:
             stp_right.move(step_to_spin)
         else:
@@ -180,7 +197,7 @@ def tof_avoid_control(action: AvoidanceAction):
         stp_left.target_speed, 
         stp_right.target_speed,    
     ))
-    needWaiting = True
+    needWaiting = True #Running Avoidance
 
 def uwb_follow_control(distance, angual):
     if distance > STD_DISTANCE:
@@ -188,6 +205,8 @@ def uwb_follow_control(distance, angual):
         stepToFollow = int((distanceToFollow * PPR) / (WHEEL_DIAM * math.pi))
         factor = ctrl_dir(angual)
         try:
+            stp_left.set_target_acceleration(ACCELER)
+            stp_right.set_target_acceleration(ACCELER)
             if factor['left'] == factor['right']:
                 stp_left.set_target_speed(factor['left'] * MAX_SPEED) #left_wheel setMaxSpeed
                 stp_right.set_target_speed(factor['right'] * MAX_SPEED) #right_wheel setMaxSpeed
@@ -212,9 +231,10 @@ def uwb_follow_control(distance, angual):
     else:
         stp_left.stop()
         stp_right.stop()
+        #stop 之後如果設set_current_steps=0
 
 def loop():
-    global needWaiting
+    global needWaiting #if Running Avoidance?
     angual = 0
     avg_distance = 0
     uwbdata_updated = False     #表示本次執行是否有讀到uwb資料
@@ -235,15 +255,14 @@ def loop():
             except BlockingIOError:
                 pass
 
-            if needWaiting: #確認是否掉頭完畢
+            if needWaiting: #確認是否Avoidance完畢
                 if stp_left.steps_to_go == 0 and stp_right.steps_to_go == 0: #左右馬達執行完畢
                     needWaiting = False
                     print('Waiting completed')
                 else: #左右馬達還在執行
-                    time.sleep(0.001)
+                    time.sleep(0.001) #再給他一點時間 才跳出while迴圈
                     continue
 
-            # TODO: Exception handling
             try:
                 tofdis_L = read_filtered_distance(bus, TOF_L_I2C_ADDRESS)
                 tofdis_ML = read_filtered_distance(bus, TOF_ML_I2C_ADDRESS)
@@ -285,7 +304,7 @@ def gotta_turn_around(d):
 async def stepper_run(stp):
     while True:
         await stp.run()
-        await asyncio.sleep(0.0005)
+        await asyncio.sleep(0.0005) #每0.0005秒跑一次 （最多1秒跑(1/0.0005)次）
 
 async def main(): #定義main()為一個協同程序/協程(coroutine)
     evloop = asyncio.get_event_loop() #建立一個Event Loop

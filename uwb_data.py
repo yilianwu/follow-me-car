@@ -11,8 +11,8 @@ def ser_read(ser):
             break #取消迴圈
     #print('#', end='', flush=True)
     ser.timeout = None
-    len_byte=ser.read()
-    data=ser.read(int(len_byte[0]))
+    len_byte=ser.read() #len_byte=19
+    data=ser.read(int(len_byte[0])) 
     #print('$', end='', flush=True)
     uwb_angual=int.from_bytes(data[3:7], 'little', signed=True)
     uwb_distance=int.from_bytes(data[7:11], 'little', signed=True)
@@ -27,5 +27,5 @@ def ser_read(ser):
 def uwb_checksum(data):
     checksum = 0
     for b in data:
-        checksum ^= b
+        checksum ^= b #XOR
     return checksum
