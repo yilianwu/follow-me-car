@@ -46,9 +46,6 @@ TURNING_ANGLE_PN30 = 0.3
 TURNING_ANGLE_PN20 = 0.4
 TURNING_ANGLE_PN8 = 0.7
 
-# gta_count = 0
-# gta_value = 0
-# gta_last = 0
 needWaiting = False #if Running Avoidance?
 avg_count = 0
 avg_last = 0
@@ -278,28 +275,6 @@ def loop():
             elif uwbdata_updated:
                 uwb_follow_control(avg_distance, angual)
                 uwbdata_updated = False
-
-"""        
-def gotta_turn_around(d):
-    global gta_count
-    global gta_value
-    global gta_last
-    dist_diff = 0
-    gta_count += 1
-
-    if gta_count >= 5:
-        dist_diff = d - gta_last
-        if dist_diff > 3:
-            gta_value += 1 # 累積壞寶寶標籤
-        elif dist_diff < 0:
-            gta_value = 0 # 追上才給好寶寶貼紙reset
-        gta_last = d
-        gta_count = 0
-
-        return (gta_value >= 5)
-    else:
-        return False
-"""
 
 async def stepper_run(stp):
     while True:
