@@ -244,8 +244,11 @@ def loop():
                 angual, distance = uwb.ser_read(ser)
 
                 #print("angual: {}, distance: {}".format(angual,distance))
+                '''
                 angual = angle_filtering(angual)
                 avg_distance = avg_dist(distance)
+                '''
+                avg_distance = distance #temp
                 uwbdata_updated = True
             except RuntimeError:
                 print("invalid UWB value")

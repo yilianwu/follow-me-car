@@ -1,31 +1,38 @@
 import serial, time
+import sys
+from select import select
+import tty
+import termios
+
+cur_move = 0
+
+FAKE_DATA = [
+    (0, 0),
+    (0, 150),
+    (30, 120),
+    (-30, 120),
+]
 
 def ser_read(ser):
-    ser.timeout = 0.01
-    while True:
-        #print('.', end='', flush=True)
-        head_byte=ser.read()
-        if len(head_byte) < 1:
-            raise BlockingIOError
-        if head_byte == b'\x2a':
-            break #取消迴圈
-    #print('#', end='', flush=True)
-    ser.timeout = None
-    len_byte=ser.read() #len_byte=19
-    data=ser.read(int(len_byte[0])) 
-    #print('$', end='', flush=True)
-    uwb_angual=int.from_bytes(data[3:7], 'little', signed=True)
-    uwb_distance=int.from_bytes(data[7:11], 'little', signed=True)
-    check = ser.read()
-    if ord(check) != uwb_checksum(data):
-        raise RuntimeError("Invalid UWB checksum")
-    foot = ser.read()
-    if foot != b'\x23':
-        raise RuntimeError("Invalid foot")
-    return uwb_angual, uwb_distance
+    global cur_move
+    timeout = 0.01
+    rlist, _, _ = select([sys.stdin], [], [], timeout)
+    if rlist:
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        ch = ''
+        try:
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
 
-def uwb_checksum(data):
-    checksum = 0
-    for b in data:
-        checksum ^= b #XOR
-    return checksum
+        if ch == 's':
+            cur_move = 0
+        elif ch == 'w':
+            cur_move = 1
+        elif ch == 'a':
+            cur_move = 2
+        elif ch == 'd':
+            cur_move = 3
+
+    return FAKE_DATA[cur_move]
