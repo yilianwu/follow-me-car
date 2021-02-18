@@ -55,19 +55,13 @@ last_angle = None
 last_angle_fail = 0
 
 stp_left = StepperController(
-    profile=AccelProfile(), 
-    driver=StepDirDriver(
-        dir_pin=6, 
-        step_pin=5,
-    )
+    StepDirDriver(6, 5),
+    AccelProfile(),
 )
 
 stp_right = StepperController(
-    profile=AccelProfile(), 
-    driver=StepDirDriver(
-        dir_pin=24, 
-        step_pin=23,
-    )
+    StepDirDriver(24, 23),
+    AccelProfile(),
 )
 
 stp_left.activate()
@@ -275,7 +269,7 @@ def loop():
             elif uwbdata_updated:
                 uwb_follow_control(avg_distance, angual)
                 uwbdata_updated = False
-
+"""
 async def stepper_run(stp):
     while True:
         await stp.run()
@@ -296,6 +290,19 @@ async def main(): #定義main()為一個協同程序/協程(coroutine)
         await task2
     stp_left.shutdown()
     stp_right.shutdown()
+"""
+
+def main():
+    stp_left.spawn()
+    stp_right.spawn()
+
+    try:
+        loop()
+    except KeyboardInterrupt:
+        pass
+
+    stp_left.terminate()
+    stp_right.terminate()
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    main()
