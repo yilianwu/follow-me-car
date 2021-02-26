@@ -16,16 +16,16 @@ TOF_L_I2C_ADDRESS = 0x53
 TOF_ML_I2C_ADDRESS = 0x54
 TOF_MR_I2C_ADDRESS = 0x55
 TOF_R_I2C_ADDRESS = 0x56
-TOF_SPIN_ANG = 45
-TOF_BACK_ANG = 30
-TOF_TURN_ANG = 30
+TOF_SPIN_ANG = 60
+TOF_BACK_ANG = 45
+TOF_TURN_ANG = 45
 
 WHEEL_DIAM = 12.5
 CAR_TREAD = 33.0
 TURN_AROUND_DIST = (CAR_TREAD * math.pi) / 2
 PPR = 800 # pulse/rev
 RPM = 220
-STD_DISTANCE = 50
+STD_DISTANCE = 70
 MAX_SPEED = (RPM * PPR) / 60
 ACCELER = 800
 TOF_SPEED = MAX_SPEED
@@ -254,14 +254,17 @@ def loop():
                     time.sleep(0.001) #再給他一點時間 才跳出while迴圈
                     continue
 
+            avoid_action = AvoidanceAction.NORMAL
             try:
-                tofdis_L = read_filtered_distance(bus, TOF_L_I2C_ADDRESS)
-                tofdis_ML = read_filtered_distance(bus, TOF_ML_I2C_ADDRESS)
-                tofdis_MR = read_filtered_distance(bus, TOF_MR_I2C_ADDRESS)
-                tofdis_R = read_filtered_distance(bus, TOF_R_I2C_ADDRESS)
-                avoid_action = tof10120_judgment(tofdis_L, tofdis_ML, tofdis_MR, tofdis_R)
+                if stp_left.steps_to_go != 0 or stp_right.steps_to_go != 0: #左右馬達還在執行
+                    tofdis_L = read_filtered_distance(bus, TOF_L_I2C_ADDRESS)
+                    tofdis_ML = read_filtered_distance(bus, TOF_ML_I2C_ADDRESS)
+                    tofdis_MR = read_filtered_distance(bus, TOF_MR_I2C_ADDRESS)
+                    tofdis_R = read_filtered_distance(bus, TOF_R_I2C_ADDRESS)
+                    avoid_action = tof10120_judgment(tofdis_L, tofdis_ML, tofdis_MR, tofdis_R)
+
             except:
-                avoid_action = AvoidanceAction.NORMAL
+                pass
 
             if avoid_action != AvoidanceAction.NORMAL:
                 print(avoid_action)
