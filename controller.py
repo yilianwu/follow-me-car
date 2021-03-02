@@ -22,7 +22,8 @@ TOF_TURN_ANG = 45
 
 WHEEL_DIAM = 12.5
 CAR_TREAD = 33.0
-TURN_AROUND_DIST = (CAR_TREAD * math.pi) / 2
+SPIN_AROUND_DIST = (CAR_TREAD * math.pi) / 2
+TURN_AROUND_DIST = (CAR_TREAD * 2 * math.pi) / 2
 PPR = 800 # pulse/rev
 RPM = 220
 STD_DISTANCE = 70
@@ -156,7 +157,7 @@ def tof_avoid_control(action: AvoidanceAction):
     if action == AvoidanceAction.SPIN_LEFT or action == AvoidanceAction.SPIN_RIGHT: #向左自轉or向右自轉 避障
         stp_left.set_target_speed(TOF_SPEED)
         stp_right.set_target_speed(TOF_SPEED)
-        step_to_spin = int((TURN_AROUND_DIST * (TOF_SPIN_ANG/180) * PPR) / (WHEEL_DIAM * math.pi))
+        step_to_spin = int((SPIN_AROUND_DIST * (TOF_SPIN_ANG/180) * PPR) / (WHEEL_DIAM * math.pi))
         if action == AvoidanceAction.SPIN_LEFT:
             stp_left.move(-step_to_spin)
             stp_right.move(step_to_spin)
