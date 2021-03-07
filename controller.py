@@ -1,7 +1,7 @@
 from steppyr import StepperController, DIRECTION_CW, DIRECTION_CCW
 from steppyr.profiles.accel import AccelProfile
 from steppyr.drivers.stepdir import StepDirDriver
-
+from constant import *
 import serial, time
 import asyncio
 from contextlib import suppress
@@ -11,41 +11,6 @@ import uwb_data as uwb
 from tof10120 import read_filtered_distance
 from avoidance import AvoidanceAction, tof10120_judgment
 from smbus import SMBus
-
-TOF_L_I2C_ADDRESS = 0x53
-TOF_ML_I2C_ADDRESS = 0x54
-TOF_MR_I2C_ADDRESS = 0x55
-TOF_R_I2C_ADDRESS = 0x56
-TOF_SPIN_ANG = 60
-TOF_BACK_ANG = 45
-TOF_TURN_ANG = 45
-
-WHEEL_DIAM = 12.5
-CAR_TREAD = 33.0
-SPIN_AROUND_DIST = (CAR_TREAD * math.pi) / 2
-TURN_AROUND_DIST = (CAR_TREAD * 2 * math.pi) / 2
-PPR = 800 # pulse/rev
-RPM = 220
-STD_DISTANCE = 70
-MAX_SPEED = (RPM * PPR) / 60
-ACCELER = 800
-TOF_SPEED = MAX_SPEED
-TOF_ACCELER = 1600
-
-ANGLE_FILTER_SDIM = 20
-ANGLE_FILTER_NDIM = 5
-ANGLE_FILTER_SFAIL = 0.2 #計算角度的比例參數 last_angle * (1 - ANGLE_FILTER_SFAIL) + ang * ANGLE_FILTER_SFAIL
-ANGLE_FILTER_NFAIL = 0.05 #計算角度的比例參數 last_angle * (1 - ANGLE_FILTER_NFAIL) + ang * ANGLE_FILTER_NFAIL
-ANGLE_FILTER_MAXFAIL = 50 #
-
-TURNING_ANGLE_PN80 = 0.02
-TURNING_ANGLE_PN70 = 0.05
-TURNING_ANGLE_PN60 = 0.15
-TURNING_ANGLE_PN50 = 0.3
-TURNING_ANGLE_PN40 = 0.5
-TURNING_ANGLE_PN30 = 0.75
-TURNING_ANGLE_PN20 = 0.8
-TURNING_ANGLE_PN8 = 0.95
 
 needWaiting = False #if Running Avoidance?
 avg_count = 0
@@ -212,7 +177,8 @@ def uwb_follow_control(distance, angual):
             pass
         stp_left.move(stepToFollow)
         stp_right.move(stepToFollow)
-        print("Steps: {}, {}; Speed: {}, {}; TargetSpeed: {}, {}".format(
+        print("Distance: {}; Steps: {}, {}; Speed: {}, {}; TargetSpeed: {}, {}".format(
+            distance,
             stp_left.steps_to_go,
             stp_right.steps_to_go, 
             stp_left.current_speed, 
@@ -262,7 +228,7 @@ def loop():
                     tofdis_ML = read_filtered_distance(bus, TOF_ML_I2C_ADDRESS)
                     tofdis_MR = read_filtered_distance(bus, TOF_MR_I2C_ADDRESS)
                     tofdis_R = read_filtered_distance(bus, TOF_R_I2C_ADDRESS)
-                    avoid_action = tof10120_judgment(tofdis_L, tofdis_ML, tofdis_MR, tofdis_R)
+                    avoid_action = tof10120_judgment(tofdis_L, tofdis_ML, tofdis_MR, tofdis_R, stp_left.current_speed, stp_right.current_speed)
 
             except:
                 pass
