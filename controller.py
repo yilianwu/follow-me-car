@@ -183,7 +183,8 @@ def uwb_follow_control(distance, angual):
             pass
         stp_left.move(stepToFollow)
         stp_right.move(stepToFollow)
-        print("Distance: {}; Steps: {}, {}; Speed: {}, {}; TargetSpeed: {}, {}".format(
+        print("Angual: {}; Distance: {}; Steps: {}, {}; Speed: {}, {}; TargetSpeed: {}, {}".format(
+            angual,
             distance,
             stp_left.steps_to_go,
             stp_right.steps_to_go, 
@@ -193,7 +194,8 @@ def uwb_follow_control(distance, angual):
             stp_right.target_speed,    
         ))
     else:
-        if angual < -15 or angual > 15:
+        print("Close enough! TURNING to face to you!")
+        if angual < -8 or angual > 8:
             car_spin_around(angual)
         else:
             stp_left.stop()
