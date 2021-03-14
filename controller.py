@@ -37,6 +37,17 @@ stp_left.set_target_speed(MAX_SPEED)
 stp_right.set_target_acceleration(ACCELER)
 stp_right.set_target_speed(MAX_SPEED)
 
+## Helper functions
+def car_spin_around(angual, speed=None):
+    if speed != None:
+        stp_left.set_target_speed(speed)
+        stp_right.set_target_speed(speed)
+    step_to_spin = int((SPIN_AROUND_DIST * (angual/180) * PPR) / (WHEEL_DIAM * math.pi))
+    stp_left.move(-step_to_spin)
+    stp_right.move(step_to_spin)
+
+########################
+
 def avg_dist(d):
     global avg_count
     global avg_last
@@ -120,15 +131,10 @@ def tof_avoid_control(action: AvoidanceAction):
     stp_left.set_target_acceleration(TOF_ACCELER)
     stp_right.set_target_acceleration(TOF_ACCELER)
     if action == AvoidanceAction.SPIN_LEFT or action == AvoidanceAction.SPIN_RIGHT: #向左自轉or向右自轉 避障
-        stp_left.set_target_speed(TOF_SPEED)
-        stp_right.set_target_speed(TOF_SPEED)
-        step_to_spin = int((SPIN_AROUND_DIST * (TOF_SPIN_ANG/180) * PPR) / (WHEEL_DIAM * math.pi))
         if action == AvoidanceAction.SPIN_LEFT:
-            stp_left.move(-step_to_spin)
-            stp_right.move(step_to_spin)
+            car_spin_around(TOF_SPIN_ANG, TOF_SPEED)
         else:
-            stp_left.move(step_to_spin)
-            stp_right.move(-step_to_spin)
+            car_spin_around(-TOF_SPIN_ANG, TOF_SPEED)
     elif action == AvoidanceAction.BACK_LEFT or action == AvoidanceAction.BACK_RIGHT: #右輪不動左輪反轉or左輪不動右輪反轉 避障
         stp_left.set_target_speed(TOF_SPEED)
         stp_right.set_target_speed(TOF_SPEED)
@@ -187,9 +193,12 @@ def uwb_follow_control(distance, angual):
             stp_right.target_speed,    
         ))
     else:
-        stp_left.stop()
-        stp_right.stop()
-        #stop 之後如果設set_current_steps=0
+        if angual < -15 or angual > 15:
+            car_spin_around(angual)
+        else:
+            stp_left.stop()
+            stp_right.stop()
+            #stop 之後如果設set_current_steps=0
 
 def loop():
     global needWaiting #if Running Avoidance?
