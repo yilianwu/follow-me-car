@@ -169,7 +169,7 @@ class TuiApp():
 
     def loop_once(self):
         curtime = time.time()
-        if curtime - self.last_rftime < 0.03:
+        if curtime - self.last_rftime < 0.1:
             return False
         elif curtime - self.last_rftime > 5:
             self.window.redraw()

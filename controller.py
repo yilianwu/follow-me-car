@@ -213,7 +213,7 @@ def loop():
 
     bus = SMBus(1)
     with serial.Serial('/dev/ttyS0', 115200) as ser:
-        while True:
+        while (tuiapp is None) or (not tuiapp.stopping):
             #print("Reading uwb serial", end='')
             try:
                 angual, distance = uwb.ser_read(ser)
@@ -259,6 +259,7 @@ def loop():
                 if uwbdata_updated:
                     tuiapp.update_uwb(avg_distance, angual)
                 tuiapp.update_stepper(stp_left, stp_right)
+                tuiapp.loop_once()
 
 def main():
     stp_left.spawn()
