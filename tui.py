@@ -53,7 +53,7 @@ class TuiApp():
         self.window.add(30, UWBDATA_Y + 1, WLabel("Angual"))
         ## Value
         self.lbl_uwb_dist = FormatLabel("{:8.1f}", 0.0)
-        self.lbl_uwb_ang = FormatLabel("{:>4d}", 0)
+        self.lbl_uwb_ang = FormatLabel("{:6.1f}", 0)
         self.window.add(12, UWBDATA_Y + 2, self.lbl_uwb_dist)
         self.window.add(30, UWBDATA_Y + 2, self.lbl_uwb_ang)
 
