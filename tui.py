@@ -5,6 +5,10 @@ from picotui.screen import Screen
 from picotui.widgets import *
 from datetime import datetime
 from steppyr import StepperController
+import os
+import sys
+import select
+import time
 
 class FormatLabel(Widget):
     def __init__(self, fmttext, val, w=0):
@@ -38,6 +42,7 @@ class TuiApp():
         Screen.attr_reset()
 
         self.stopping = False
+        self.kbuf = b""
         self.window = Dialog(0, 0, 48, 20)
 
         UWBDATA_Y = 1
@@ -97,6 +102,9 @@ class TuiApp():
         self.window.add(32, STEPPER_Y + 2, self.lbl_stpr_ts)
         self.window.add(32, STEPPER_Y + 3, self.lbl_stpr_tg)
 
+        btn_zzz = WButton(10, "Anywhere")
+        self.window.add(8, 19, btn_zzz)
+
         btn_stop = WButton(8, "Stop")
         self.window.add(32, 19, btn_stop)
         btn_stop.on('click', lambda w: self.stop())
@@ -133,10 +141,46 @@ class TuiApp():
         self.lbl_stpr_ts.update_value(stepper_r.target_speed)
         self.lbl_stpr_tg.update_value(stepper_r.steps_to_go)
 
-    def loop(self):
-        self.window.loop()
+    def get_input(self):
+        if self.kbuf:
+            key = self.kbuf[0:1]
+            self.kbuf = self.kbuf[1:]
+        else:
+            readable, _, _ = select.select([sys.stdin], [], [], 0)
+            if len(readable) == 0:
+                return None
+            key = os.read(0, 32)
+            if key[0] != 0x1b:
+                key = key.decode()
+                self.kbuf = key[1:].encode()
+                key = key[0:1].encode()
+        key = KEYMAP.get(key, key)
+
+        if isinstance(key, bytes) and key.startswith(b"\x1b[M") and len(key) == 6:
+            if key[3] != 32:
+                return None
+            row = key[5] - 33
+            col = key[4] - 33
+            return [col, row]
+
+        return key
+
+    def redraw(self):
+        self.window.redraw()
+
+    def loop_once(self):
+        key = self.get_input()
+        if key is None:
+            return False
+        res = self.window.handle_input(key)
+
+        if res is not None and res is not True:
+            return res
 
 if __name__ == '__main__':
     with Context():
         app = TuiApp()
-        app.loop()
+        app.redraw()
+        while not app.stopping:
+            app.loop_once()
+            time.sleep(0.01)

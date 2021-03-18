@@ -52,7 +52,7 @@ def avg_dist(d):
     global avg_count
     global avg_last
     global avg_sum
-    global avg_cur 
+    global avg_cur
 
     if avg_count >= 5:
         avg_last = avg_sum / 5
@@ -114,8 +114,8 @@ def angle_filtering(ang):
             retval = ang
             last_angle = ang
             last_angle_fail = 0 #failed_counter++
-    
-    if last_angle_fail >= ANGLE_FILTER_MAXFAIL: 
+
+    if last_angle_fail >= ANGLE_FILTER_MAXFAIL:
         retval = ang
         last_angle = ang
 
@@ -151,14 +151,14 @@ def tof_avoid_control(action: AvoidanceAction):
             stp_right.move(step_to_spin)
         else:
             stp_left.move(step_to_spin)
-    
+
     print("Steps: {}, {}; Speed: {}, {}; TargetSpeed: {}, {}".format(
         stp_left.steps_to_go,
-        stp_right.steps_to_go, 
-        stp_left.current_speed, 
-        stp_right.current_speed, 
-        stp_left.target_speed, 
-        stp_right.target_speed,    
+        stp_right.steps_to_go,
+        stp_left.current_speed,
+        stp_right.current_speed,
+        stp_left.target_speed,
+        stp_right.target_speed,
     ))
     needWaiting = True #Running Avoidance
 
@@ -186,11 +186,11 @@ def uwb_follow_control(distance, angual):
         print("Distance: {}; Steps: {}, {}; Speed: {}, {}; TargetSpeed: {}, {}".format(
             distance,
             stp_left.steps_to_go,
-            stp_right.steps_to_go, 
-            stp_left.current_speed, 
-            stp_right.current_speed, 
-            stp_left.target_speed, 
-            stp_right.target_speed,    
+            stp_right.steps_to_go,
+            stp_left.current_speed,
+            stp_right.current_speed,
+            stp_left.target_speed,
+            stp_right.target_speed,
         ))
     else:
         if angual < -15 or angual > 15:
@@ -259,7 +259,7 @@ async def main(): #定義main()為一個協同程序/協程(coroutine)
     user_task = evloop.run_in_executor(None, loop)
     task1 = asyncio.create_task(stepper_run(stp_left)) # 原本的motorRun()
     task2 = asyncio.create_task(stepper_run(stp_right)) # 原本的motorRun()
-    
+
     await user_task
 
     task1.cancel()
@@ -282,6 +282,9 @@ def main():
 
     stp_left.terminate()
     stp_right.terminate()
+
+def tui_main(app):
+    main()
 
 if __name__ == '__main__':
     main()
