@@ -52,8 +52,8 @@ class TuiApp():
         self.window.add(12, UWBDATA_Y + 1, WLabel("Distance"))
         self.window.add(30, UWBDATA_Y + 1, WLabel("Angual"))
         ## Value
-        self.lbl_uwb_dist = FormatLabel("{:.1f}", 0.0)
-        self.lbl_uwb_ang = FormatLabel("{}", 0)
+        self.lbl_uwb_dist = FormatLabel("{:8.1f}", 0.0)
+        self.lbl_uwb_ang = FormatLabel("{:>4d}", 0)
         self.window.add(12, UWBDATA_Y + 2, self.lbl_uwb_dist)
         self.window.add(30, UWBDATA_Y + 2, self.lbl_uwb_ang)
 
@@ -81,7 +81,7 @@ class TuiApp():
 
         STATUS_Y = 11
         self.window.add(2,  STATUS_Y, WLabel("Status: "))
-        self.lbl_status = FormatLabel("{}", "TEST")
+        self.lbl_status = FormatLabel("{}", "TEST", 32)
         self.window.add(10, STATUS_Y, self.lbl_status)
 
         STEPPER_Y = 14
@@ -90,16 +90,16 @@ class TuiApp():
         self.window.add(4, STEPPER_Y + 2, WLabel("TgtSpeed: "))
         self.window.add(4, STEPPER_Y + 3, WLabel("StepToGo: "))
         ## Left
-        self.lbl_stpl_cs = FormatLabel("{:.2f}", 0.0)
-        self.lbl_stpl_ts = FormatLabel("{:.2f}", 0.0)
-        self.lbl_stpl_tg = FormatLabel("{:d}", 0)
+        self.lbl_stpl_cs = FormatLabel("{:8.2f}", 0.0)
+        self.lbl_stpl_ts = FormatLabel("{:8.2f}", 0.0)
+        self.lbl_stpl_tg = FormatLabel("{:8d}", 0)
         self.window.add(20, STEPPER_Y + 1, self.lbl_stpl_cs)
         self.window.add(20, STEPPER_Y + 2, self.lbl_stpl_ts)
         self.window.add(20, STEPPER_Y + 3, self.lbl_stpl_tg)
         ## Right
-        self.lbl_stpr_cs = FormatLabel("{:.2f}", 0.0)
-        self.lbl_stpr_ts = FormatLabel("{:.2f}", 0.0)
-        self.lbl_stpr_tg = FormatLabel("{:d}", 0)
+        self.lbl_stpr_cs = FormatLabel("{:8.2f}", 0.0)
+        self.lbl_stpr_ts = FormatLabel("{:8.2f}", 0.0)
+        self.lbl_stpr_tg = FormatLabel("{:8d}", 0)
         self.window.add(32, STEPPER_Y + 1, self.lbl_stpr_cs)
         self.window.add(32, STEPPER_Y + 2, self.lbl_stpr_ts)
         self.window.add(32, STEPPER_Y + 3, self.lbl_stpr_tg)

@@ -248,18 +248,18 @@ def loop():
             except:
                 pass
 
+            if tuiapp is not None:
+                if uwbdata_updated:
+                    tuiapp.update_uwb(avg_distance, angual)
+                tuiapp.update_stepper(stp_left, stp_right)
+                tuiapp.loop_once()
+
             if avoid_action != AvoidanceAction.NORMAL:
                 print(avoid_action)
                 tof_avoid_control(avoid_action)
             elif uwbdata_updated:
                 uwb_follow_control(avg_distance, angual)
                 uwbdata_updated = False
-
-            if tuiapp is not None:
-                if uwbdata_updated:
-                    tuiapp.update_uwb(avg_distance, angual)
-                tuiapp.update_stepper(stp_left, stp_right)
-                tuiapp.loop_once()
 
 def main():
     stp_left.spawn()
