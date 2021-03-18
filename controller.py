@@ -37,6 +37,8 @@ stp_left.set_target_speed(MAX_SPEED)
 stp_right.set_target_acceleration(ACCELER)
 stp_right.set_target_speed(MAX_SPEED)
 
+tuiapp = None
+
 ## Helper functions
 def car_spin_around(angual, speed=None):
     if speed != None:
@@ -151,7 +153,7 @@ def tof_avoid_control(action: AvoidanceAction):
             stp_right.move(step_to_spin)
         else:
             stp_left.move(step_to_spin)
-
+    """
     print("Steps: {}, {}; Speed: {}, {}; TargetSpeed: {}, {}".format(
         stp_left.steps_to_go,
         stp_right.steps_to_go,
@@ -160,6 +162,7 @@ def tof_avoid_control(action: AvoidanceAction):
         stp_left.target_speed,
         stp_right.target_speed,
     ))
+    """
     needWaiting = True #Running Avoidance
 
 def uwb_follow_control(distance, angual):
@@ -183,6 +186,7 @@ def uwb_follow_control(distance, angual):
             pass
         stp_left.move(stepToFollow)
         stp_right.move(stepToFollow)
+        """
         print("Distance: {}; Steps: {}, {}; Speed: {}, {}; TargetSpeed: {}, {}".format(
             distance,
             stp_left.steps_to_go,
@@ -192,6 +196,7 @@ def uwb_follow_control(distance, angual):
             stp_left.target_speed,
             stp_right.target_speed,
         ))
+        """
     else:
         if angual < -15 or angual > 15:
             car_spin_around(angual)
@@ -237,8 +242,9 @@ def loop():
                     tofdis_ML = read_filtered_distance(bus, TOF_ML_I2C_ADDRESS)
                     tofdis_MR = read_filtered_distance(bus, TOF_MR_I2C_ADDRESS)
                     tofdis_R = read_filtered_distance(bus, TOF_R_I2C_ADDRESS)
+                    if tuiapp is not None:
+                        tuiapp.update_tof(tofdis_L, None, tofdis_ML, tofdis_MR, None, tofdis_R)
                     avoid_action = tof10120_judgment(tofdis_L, tofdis_ML, tofdis_MR, tofdis_R, stp_left.current_speed, stp_right.current_speed)
-
             except:
                 pass
 
@@ -248,28 +254,11 @@ def loop():
             elif uwbdata_updated:
                 uwb_follow_control(avg_distance, angual)
                 uwbdata_updated = False
-"""
-async def stepper_run(stp):
-    while True:
-        await stp.run()
-        await asyncio.sleep(0.0005) #每0.0005秒跑一次 （最多1秒跑(1/0.0005)次）
 
-async def main(): #定義main()為一個協同程序/協程(coroutine)
-    evloop = asyncio.get_event_loop() #建立一個Event Loop
-    user_task = evloop.run_in_executor(None, loop)
-    task1 = asyncio.create_task(stepper_run(stp_left)) # 原本的motorRun()
-    task2 = asyncio.create_task(stepper_run(stp_right)) # 原本的motorRun()
-
-    await user_task
-
-    task1.cancel()
-    task2.cancel()
-    with suppress(asyncio.CancelledError): #強制結束task1, task2 忽略exception(Cancel error)
-        await task1
-        await task2
-    stp_left.shutdown()
-    stp_right.shutdown()
-"""
+            if tuiapp is not None:
+                if uwbdata_updated:
+                    tuiapp.update_uwb(avg_distance, angual)
+                tuiapp.update_stepper(stp_left, stp_right)
 
 def main():
     stp_left.spawn()
@@ -284,6 +273,8 @@ def main():
     stp_right.terminate()
 
 def tui_main(app):
+    global tuiapp
+    tuiapp = app
     main()
 
 if __name__ == '__main__':

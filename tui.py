@@ -3,12 +3,13 @@ from picotui.defs import *
 from picotui.basewidget import Widget
 from picotui.screen import Screen
 from picotui.widgets import *
-from datetime import datetime
 from steppyr import StepperController
+
 import os
 import sys
 import select
 import time
+from controller import tui_main
 
 class FormatLabel(Widget):
     def __init__(self, fmttext, val, w=0):
@@ -43,6 +44,7 @@ class TuiApp():
 
         self.stopping = False
         self.kbuf = b""
+        self.last_rftime = 0
         self.window = Dialog(0, 0, 48, 20)
 
         UWBDATA_Y = 1
@@ -165,10 +167,14 @@ class TuiApp():
 
         return key
 
-    def redraw(self):
-        self.window.redraw()
-
     def loop_once(self):
+        curtime = time.time()
+        if curtime - self.last_rftime < 0.03:
+            return False
+        elif curtime - self.last_rftime > 5:
+            self.window.redraw()
+        self.last_rftime = curtime
+
         key = self.get_input()
         if key is None:
             return False
@@ -180,7 +186,9 @@ class TuiApp():
 if __name__ == '__main__':
     with Context():
         app = TuiApp()
-        app.redraw()
+        """
         while not app.stopping:
             app.loop_once()
             time.sleep(0.01)
+        """
+        tui_main(app)
