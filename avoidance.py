@@ -16,7 +16,9 @@ avoid_alert = False
 def tof10120_judgment(dis_L, dis_ML, dis_MR, dis_R, left_speed, right_speed):
     global avoid_alert
     global avoid_alertcnt
+    """
     print('TOF: {}, {}, {}, {}'.format(dis_L, dis_ML, dis_MR, dis_R))
+    """
     car_speed = max(left_speed,right_speed)
     dis_LR_diff = (dis_L + dis_ML) - (dis_MR + dis_R)
 

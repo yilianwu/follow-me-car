@@ -182,7 +182,7 @@ def tof_avoid_control(action: AvoidanceAction):
     """
 
 def uwb_follow_control(distance, angual):
-    distanceToFollow = distance - STD_DISTANCE
+    distanceToFollow = distance - MIN_DISTANCE
     stepToFollow = int((distanceToFollow * PPR) / (WHEEL_DIAM * math.pi))
     factor = ctrl_dir(angual)
     try:
@@ -216,14 +216,16 @@ def uwb_follow_control(distance, angual):
 def state_transfer(old_status, distance, angual, bus):
     if old_status == CarStatus.STANDBY:
         ### 偵測是否開始跟隨
-        if distance > STD_DISTANCE:
+        if distance > MAX_DISTANCE:
             return CarStatus.FOLLOWING
         ### 偵測是否跟隨方向
-        if angual < -15 or angual > 15:
+        if angual < -20 or angual > 20:
+            stp_left.set_target_acceleration(SPIN_ACCELER)
+            stp_right.set_target_acceleration(SPIN_ACCELER)
             return CarStatus.SPINNING
     elif old_status == CarStatus.FOLLOWING:
         ### 偵測是否停下
-        if distance <= STD_DISTANCE:
+        if distance <= MIN_DISTANCE:
             stp_left.stop()
             stp_right.stop()
             return CarStatus.STANDBY
@@ -251,10 +253,14 @@ def state_transfer(old_status, distance, angual, bus):
             return CarStatus.FOLLOWING
     elif old_status == CarStatus.SPINNING:
         ### 偵測人是否跑走了
-        if distance > STD_DISTANCE:
+        if distance > MAX_DISTANCE:
+            stp_left.set_target_acceleration(ACCELER)
+            stp_right.set_target_acceleration(ACCELER)
             return CarStatus.FOLLOWING
         ### 偵測是否跟到了
-        if angual > -15 and angual < 15:
+        if angual > -20 and angual < 20:
+            stp_left.set_target_acceleration(ACCELER)
+            stp_right.set_target_acceleration(ACCELER)
             stp_left.stop()
             stp_right.stop()
             return CarStatus.STANDBY
