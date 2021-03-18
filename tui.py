@@ -81,7 +81,7 @@ class TuiApp():
 
         STATUS_Y = 11
         self.window.add(2,  STATUS_Y, WLabel("Status: "))
-        self.lbl_status = FormatLabel("{}", "TEST", 32)
+        self.lbl_status = FormatLabel("{}", "Unknown", 32)
         self.window.add(10, STATUS_Y, self.lbl_status)
 
         STEPPER_Y = 14

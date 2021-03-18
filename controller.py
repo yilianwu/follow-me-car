@@ -11,8 +11,8 @@ import uwb_data as uwb
 from tof10120 import read_filtered_distance
 from avoidance import AvoidanceAction, tof10120_judgment
 from smbus import SMBus
+from enum import Enum
 
-needWaiting = False #if Running Avoidance?
 avg_count = 0
 avg_last = 0
 avg_sum = 0
@@ -38,6 +38,25 @@ stp_right.set_target_acceleration(ACCELER)
 stp_right.set_target_speed(MAX_SPEED)
 
 tuiapp = None
+
+## State Machine
+class CarStatus(Enum):
+    STANDBY = 0
+    FOLLOWING = 1
+    AVOID = 2
+    SPINNING = 3
+
+    def __str__(self):
+        if self == CarStatus.STANDBY:
+            return "StandBy"
+        elif self == CarStatus.FOLLOWING:
+            return "Following"
+        elif self == CarStatus.AVOID:
+            return "Avoid"
+        elif self == CarStatus.SPINNING:
+            return "Spinning"
+        else:
+            return "Unknown"
 
 ## Helper functions
 def car_spin_around(angual, speed=None):
@@ -124,8 +143,6 @@ def angle_filtering(ang):
     return retval
 
 def tof_avoid_control(action: AvoidanceAction):
-    global needWaiting
-
     stp_left.stop()
     stp_right.stop()
     stp_left.set_current_steps(0)
@@ -163,53 +180,93 @@ def tof_avoid_control(action: AvoidanceAction):
         stp_right.target_speed,
     ))
     """
-    needWaiting = True #Running Avoidance
 
 def uwb_follow_control(distance, angual):
-    if distance > STD_DISTANCE:
-        distanceToFollow = distance - STD_DISTANCE
-        stepToFollow = int((distanceToFollow * PPR) / (WHEEL_DIAM * math.pi))
-        factor = ctrl_dir(angual)
-        try:
-            stp_left.set_target_acceleration(ACCELER)
-            stp_right.set_target_acceleration(ACCELER)
-            if factor['left'] == factor['right']:
-                stp_left.set_target_speed(factor['left'] * MAX_SPEED) #left_wheel setMaxSpeed
-                stp_right.set_target_speed(factor['right'] * MAX_SPEED) #right_wheel setMaxSpeed
-            elif factor['left'] > factor['right']:
-                stp_left.set_target_speed(factor['left'] * MAX_SPEED) #left_wheel setMaxSpeed
-                stp_right.set_target_speed(factor['right'] * stp_left.current_speed) #right_wheel setMaxSpeed
-            else:
-                stp_right.set_target_speed(factor['right'] * MAX_SPEED) #left_wheel setMaxSpeed
-                stp_left.set_target_speed(factor['left'] * stp_right.current_speed) #right_wheel setMaxSpeed
-        except ZeroDivisionError:
-            pass
-        stp_left.move(stepToFollow)
-        stp_right.move(stepToFollow)
-        """
-        print("Distance: {}; Steps: {}, {}; Speed: {}, {}; TargetSpeed: {}, {}".format(
-            distance,
-            stp_left.steps_to_go,
-            stp_right.steps_to_go,
-            stp_left.current_speed,
-            stp_right.current_speed,
-            stp_left.target_speed,
-            stp_right.target_speed,
-        ))
-        """
-    else:
-        if angual < -15 or angual > 15:
-            car_spin_around(angual)
+    distanceToFollow = distance - STD_DISTANCE
+    stepToFollow = int((distanceToFollow * PPR) / (WHEEL_DIAM * math.pi))
+    factor = ctrl_dir(angual)
+    try:
+        stp_left.set_target_acceleration(ACCELER)
+        stp_right.set_target_acceleration(ACCELER)
+        if factor['left'] == factor['right']:
+            stp_left.set_target_speed(factor['left'] * MAX_SPEED) #left_wheel setMaxSpeed
+            stp_right.set_target_speed(factor['right'] * MAX_SPEED) #right_wheel setMaxSpeed
+        elif factor['left'] > factor['right']:
+            stp_left.set_target_speed(factor['left'] * MAX_SPEED) #left_wheel setMaxSpeed
+            stp_right.set_target_speed(factor['right'] * stp_left.current_speed) #right_wheel setMaxSpeed
         else:
+            stp_right.set_target_speed(factor['right'] * MAX_SPEED) #left_wheel setMaxSpeed
+            stp_left.set_target_speed(factor['left'] * stp_right.current_speed) #right_wheel setMaxSpeed
+    except ZeroDivisionError:
+        pass
+    stp_left.move(stepToFollow)
+    stp_right.move(stepToFollow)
+    """
+    print("Distance: {}; Steps: {}, {}; Speed: {}, {}; TargetSpeed: {}, {}".format(
+        distance,
+        stp_left.steps_to_go,
+        stp_right.steps_to_go,
+        stp_left.current_speed,
+        stp_right.current_speed,
+        stp_left.target_speed,
+        stp_right.target_speed,
+    ))
+    """
+
+def state_transfer(old_status, distance, angual, bus):
+    if old_status == CarStatus.STANDBY:
+        ### 偵測是否開始跟隨
+        if distance > STD_DISTANCE:
+            return CarStatus.FOLLOWING
+        ### 偵測是否跟隨方向
+        if angual < -15 or angual > 15:
+            return CarStatus.SPINNING
+    elif old_status == CarStatus.FOLLOWING:
+        ### 偵測是否停下
+        if distance <= STD_DISTANCE:
             stp_left.stop()
             stp_right.stop()
-            #stop 之後如果設set_current_steps=0
+            return CarStatus.STANDBY
+
+        ### 避障部份
+        avoid_action = AvoidanceAction.NORMAL
+        try:
+            if stp_left.steps_to_go != 0 or stp_right.steps_to_go != 0: #左右馬達還在執行
+                tofdis_L = read_filtered_distance(bus, TOF_L_I2C_ADDRESS)
+                tofdis_ML = read_filtered_distance(bus, TOF_ML_I2C_ADDRESS)
+                tofdis_MR = read_filtered_distance(bus, TOF_MR_I2C_ADDRESS)
+                tofdis_R = read_filtered_distance(bus, TOF_R_I2C_ADDRESS)
+                if tuiapp is not None:
+                    tuiapp.update_tof(tofdis_L, None, tofdis_ML, tofdis_MR, None, tofdis_R)
+                avoid_action = tof10120_judgment(tofdis_L, tofdis_ML, tofdis_MR, tofdis_R, stp_left.current_speed, stp_right.current_speed)
+        except:
+            pass
+
+        if avoid_action != AvoidanceAction.NORMAL:
+            tof_avoid_control(avoid_action)
+            return CarStatus.AVOID
+    elif old_status == CarStatus.AVOID:
+        ### 確認是否Avoidance完畢
+        if stp_left.steps_to_go == 0 and stp_right.steps_to_go == 0: #左右馬達執行完畢
+            return CarStatus.FOLLOWING
+    elif old_status == CarStatus.SPINNING:
+        ### 偵測人是否跑走了
+        if distance > STD_DISTANCE:
+            return CarStatus.FOLLOWING
+        ### 偵測是否跟到了
+        if angual > -15 and angual < 15:
+            stp_left.stop()
+            stp_right.stop()
+            return CarStatus.STANDBY
+
+    ## 如果狀態沒改變，回傳原來的值
+    return old_status
 
 def loop():
-    global needWaiting #if Running Avoidance?
     angual = 0
     avg_distance = 0
     uwbdata_updated = False     #表示本次執行是否有讀到uwb資料
+    car_status = CarStatus.STANDBY
 
     bus = SMBus(1)
     with serial.Serial('/dev/ttyS0', 115200) as ser:
@@ -227,39 +284,30 @@ def loop():
             except BlockingIOError:
                 pass
 
-            if needWaiting: #確認是否Avoidance完畢
-                if stp_left.steps_to_go == 0 and stp_right.steps_to_go == 0: #左右馬達執行完畢
-                    needWaiting = False
-                    print('Waiting completed')
-                else: #左右馬達還在執行
-                    time.sleep(0.001) #再給他一點時間 才跳出while迴圈
-                    continue
+            ## 這裡負責狀態的變換以及切換時的指令
+            car_status = state_transfer(car_status, avg_distance, angual, bus)
 
-            avoid_action = AvoidanceAction.NORMAL
-            try:
-                if stp_left.steps_to_go != 0 or stp_right.steps_to_go != 0: #左右馬達還在執行
-                    tofdis_L = read_filtered_distance(bus, TOF_L_I2C_ADDRESS)
-                    tofdis_ML = read_filtered_distance(bus, TOF_ML_I2C_ADDRESS)
-                    tofdis_MR = read_filtered_distance(bus, TOF_MR_I2C_ADDRESS)
-                    tofdis_R = read_filtered_distance(bus, TOF_R_I2C_ADDRESS)
-                    if tuiapp is not None:
-                        tuiapp.update_tof(tofdis_L, None, tofdis_ML, tofdis_MR, None, tofdis_R)
-                    avoid_action = tof10120_judgment(tofdis_L, tofdis_ML, tofdis_MR, tofdis_R, stp_left.current_speed, stp_right.current_speed)
-            except:
+            ## 這裡負責該狀態的工作
+            if car_status == CarStatus.STANDBY:
                 pass
+            elif car_status == CarStatus.FOLLOWING:
+                if uwbdata_updated:
+                    uwb_follow_control(avg_distance, angual)
+            elif car_status == CarStatus.AVOID:
+                #左右馬達還在執行
+                time.sleep(0.001) #再給他一點時間
+            elif car_status == CarStatus.SPINNING:
+                car_spin_around(angual)
 
+            ## 負責更新TUI的數值，如果有的話
             if tuiapp is not None:
                 if uwbdata_updated:
                     tuiapp.update_uwb(avg_distance, angual)
+                tuiapp.update_status(car_status)
                 tuiapp.update_stepper(stp_left, stp_right)
                 tuiapp.loop_once()
 
-            if avoid_action != AvoidanceAction.NORMAL:
-                print(avoid_action)
-                tof_avoid_control(avoid_action)
-            elif uwbdata_updated:
-                uwb_follow_control(avg_distance, angual)
-                uwbdata_updated = False
+            uwbdata_updated = False
 
 def main():
     stp_left.spawn()
