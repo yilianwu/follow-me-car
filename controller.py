@@ -12,6 +12,19 @@ from tof10120 import read_filtered_distance
 from avoidance import AvoidanceAction, tof10120_judgment
 from smbus import SMBus
 from enum import Enum
+from apa102_pi.driver import apa102
+import RPi.GPIO as GPIO
+
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(18, GPIO.OUT)
+
+NUM_LED = 100
+strip = apa102.APA102(num_led = 34, order = 'rgb')
+strip.clear_strip()
+
+sushi_white = 0x6083B6
+sushi_blue = 0x000A42
+black = 0x000000
 
 avg_count = 0
 avg_last = 0
@@ -57,6 +70,39 @@ class CarStatus(Enum):
             return "Spinning"
         else:
             return "Unknown"
+
+##LED functions
+def ledpattern(dir="straight"){
+    if dir=="left":
+        for i in range(0, NUM_LED/2):
+            strip.set_pixel_rgb(i, 0x6083B6)
+
+        strip.show()
+        # relay_on()
+
+        for i in range(0, NUM_LED/2):
+            strip.set_pixel_rgb(i, 0x000000)
+
+        strip.show()
+        # relay_off()
+    elif dir=="right":
+        for i in range(NUM_LED/2, NUM_LED):
+            strip.set_pixel_rgb(i, sushi_white)
+
+        strip.show()
+        # relay_on()
+
+        for i in range(NUM_LED/2, NUM_LED):
+            strip.set_pixel_rgb(i, black)
+
+        strip.show()
+        # relay_off()
+    else:
+        for i in range(0, NUM_LED):
+            strip.set_pixel_rgb(i, sushi_white)
+        strip.show()
+
+}
 
 ## Helper functions
 def car_spin_around(angual, speed=None):
@@ -191,12 +237,15 @@ def uwb_follow_control(distance, angual):
         if factor['left'] == factor['right']:
             stp_left.set_target_speed(factor['left'] * MAX_SPEED) #left_wheel setMaxSpeed
             stp_right.set_target_speed(factor['right'] * MAX_SPEED) #right_wheel setMaxSpeed
+            ledpattern()
         elif factor['left'] > factor['right']:
             stp_left.set_target_speed(factor['left'] * MAX_SPEED) #left_wheel setMaxSpeed
             stp_right.set_target_speed(factor['right'] * stp_left.current_speed) #right_wheel setMaxSpeed
+            ledpattern("right")
         else:
             stp_right.set_target_speed(factor['right'] * MAX_SPEED) #left_wheel setMaxSpeed
             stp_left.set_target_speed(factor['left'] * stp_right.current_speed) #right_wheel setMaxSpeed
+            ledpattern("left")
     except ZeroDivisionError:
         pass
     stp_left.move(stepToFollow)
