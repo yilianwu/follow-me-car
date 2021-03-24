@@ -199,24 +199,30 @@ def tof_avoid_control(action: AvoidanceAction):
     if action == AvoidanceAction.SPIN_LEFT or action == AvoidanceAction.SPIN_RIGHT: #向左自轉or向右自轉 避障
         if action == AvoidanceAction.SPIN_LEFT:
             car_spin_around(TOF_SPIN_ANG, TOF_SPEED)
+            ledpattern("left")
         else:
             car_spin_around(-TOF_SPIN_ANG, TOF_SPEED)
+            ledpattern("right")
     elif action == AvoidanceAction.BACK_LEFT or action == AvoidanceAction.BACK_RIGHT: #右輪不動左輪反轉or左輪不動右輪反轉 避障
         stp_left.set_target_speed(TOF_SPEED)
         stp_right.set_target_speed(TOF_SPEED)
         step_to_spin = int((TURN_AROUND_DIST * (TOF_BACK_ANG/180) * PPR) / (WHEEL_DIAM * math.pi))
         if action == AvoidanceAction.BACK_LEFT:
             stp_left.move(-step_to_spin)
+            ledpattern("left")
         else:
             stp_right.move(-step_to_spin)
+            ledpattern("right")
     elif action == AvoidanceAction.TURN_LEFT or action == AvoidanceAction.TURN_RIGHT: #左輪不動右輪正轉(車體向左轉)or右輪不動左輪正轉(車體向右轉) 避障
         stp_left.set_target_speed(TOF_SPEED)
         stp_right.set_target_speed(TOF_SPEED)
         step_to_spin = int((TURN_AROUND_DIST * (TOF_TURN_ANG/180) * PPR) / (WHEEL_DIAM * math.pi))
         if action == AvoidanceAction.TURN_LEFT:
             stp_right.move(step_to_spin)
+            ledpattern("left")
         else:
             stp_left.move(step_to_spin)
+            ledpattern("right")
     """
     print("Steps: {}, {}; Speed: {}, {}; TargetSpeed: {}, {}".format(
         stp_left.steps_to_go,
@@ -242,11 +248,18 @@ def uwb_follow_control(distance, angual):
         elif factor['left'] > factor['right']:
             stp_left.set_target_speed(factor['left'] * MAX_SPEED) #left_wheel setMaxSpeed
             stp_right.set_target_speed(factor['right'] * stp_left.current_speed) #right_wheel setMaxSpeed
-            ledpattern("right")
+            if angual < -(LED_ANG):
+                ledpattern("right")
+            else:
+                ledpattern()
         else:
             stp_right.set_target_speed(factor['right'] * MAX_SPEED) #left_wheel setMaxSpeed
             stp_left.set_target_speed(factor['left'] * stp_right.current_speed) #right_wheel setMaxSpeed
-            ledpattern("left")
+            if angual > LED_ANG:
+                ledpattern("left")
+            else:
+                ledpattern()
+
     except ZeroDivisionError:
         pass
     stp_left.move(stepToFollow)
