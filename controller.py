@@ -15,6 +15,7 @@ from enum import Enum
 from apa102_pi.driver import apa102
 import RPi.GPIO as GPIO
 
+## LED strip constant
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(18, GPIO.OUT)
 
@@ -25,6 +26,7 @@ strip.clear_strip()
 sushi_white = 0x6083B6
 sushi_blue = 0x000A42
 black = 0x000000
+## LED strip constant
 
 avg_count = 0
 avg_last = 0
@@ -71,21 +73,21 @@ class CarStatus(Enum):
         else:
             return "Unknown"
 
-##LED functions
-def ledpattern(dir="straight"){
-    if dir=="left":
+## LED functions
+def ledpattern(dir="straight"):
+    if dir == "left":
         for i in range(0, NUM_LED/2):
-            strip.set_pixel_rgb(i, 0x6083B6)
+            strip.set_pixel_rgb(i, sushi_white)
 
         strip.show()
         # relay_on()
 
         for i in range(0, NUM_LED/2):
-            strip.set_pixel_rgb(i, 0x000000)
+            strip.set_pixel_rgb(i, black)
 
         strip.show()
         # relay_off()
-    elif dir=="right":
+    elif dir == "right":
         for i in range(NUM_LED/2, NUM_LED):
             strip.set_pixel_rgb(i, sushi_white)
 
@@ -102,7 +104,6 @@ def ledpattern(dir="straight"){
             strip.set_pixel_rgb(i, sushi_white)
         strip.show()
 
-}
 
 ## Helper functions
 def car_spin_around(angual, speed=None):
@@ -307,7 +308,7 @@ def state_transfer(old_status, distance, angual, bus):
             stp_right.set_target_acceleration(ACCELER)
             return CarStatus.FOLLOWING
         ### 偵測是否跟到了
-        if angual > -20 and angual < 20:
+        if angual >= -20 and angual <= 20:
             stp_left.set_target_acceleration(ACCELER)
             stp_right.set_target_acceleration(ACCELER)
             stp_left.stop()
