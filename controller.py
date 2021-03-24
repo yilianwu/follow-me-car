@@ -76,25 +76,25 @@ class CarStatus(Enum):
 ## LED functions
 def ledpattern(dir="straight"):
     if dir == "left":
-        for i in range(0, NUM_LED/2):
+        for i in range(0, int(NUM_LED/2)):
             strip.set_pixel_rgb(i, sushi_white)
 
         strip.show()
         # relay_on()
 
-        for i in range(0, NUM_LED/2):
+        for i in range(0, int(NUM_LED/2)):
             strip.set_pixel_rgb(i, black)
 
         strip.show()
         # relay_off()
     elif dir == "right":
-        for i in range(NUM_LED/2, NUM_LED):
+        for i in range(int(NUM_LED/2), NUM_LED):
             strip.set_pixel_rgb(i, sushi_white)
 
         strip.show()
         # relay_on()
 
-        for i in range(NUM_LED/2, NUM_LED):
+        for i in range(int(NUM_LED/2), NUM_LED):
             strip.set_pixel_rgb(i, black)
 
         strip.show()
@@ -285,12 +285,14 @@ def state_transfer(old_status, distance, angual, bus):
         try:
             if stp_left.steps_to_go != 0 or stp_right.steps_to_go != 0: #左右馬達還在執行
                 tofdis_L = read_filtered_distance(bus, TOF_L_I2C_ADDRESS)
+                tofdis_FL = read_filtered_distance(bus, TOF_FL_I2C_ADDRESS)
                 tofdis_ML = read_filtered_distance(bus, TOF_ML_I2C_ADDRESS)
                 tofdis_MR = read_filtered_distance(bus, TOF_MR_I2C_ADDRESS)
+                tofdis_FR = read_filtered_distance(bus, TOF_FR_I2C_ADDRESS)
                 tofdis_R = read_filtered_distance(bus, TOF_R_I2C_ADDRESS)
                 if tuiapp is not None:
-                    tuiapp.update_tof(tofdis_L, None, tofdis_ML, tofdis_MR, None, tofdis_R)
-                avoid_action = tof10120_judgment(tofdis_L, tofdis_ML, tofdis_MR, tofdis_R, stp_left.current_speed, stp_right.current_speed)
+                    tuiapp.update_tof(tofdis_L, tofdis_FL, tofdis_ML, tofdis_MR, tofdis_FR, tofdis_R)
+                avoid_action = tof10120_judgment(tofdis_L, tofdis_FL, tofdis_ML, tofdis_MR, tofdis_FR, tofdis_R, stp_left.current_speed, stp_right.current_speed)
         except:
             pass
 

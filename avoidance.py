@@ -13,14 +13,14 @@ class AvoidanceAction(Enum):
 avoid_alertcnt = 3
 avoid_alert = False
 
-def tof10120_judgment(dis_L, dis_ML, dis_MR, dis_R, left_speed, right_speed):
+def tof10120_judgment(dis_L, dis_FL, dis_ML, dis_MR, dis_FR, dis_R, left_speed, right_speed):
     global avoid_alert
     global avoid_alertcnt
     """
     print('TOF: {}, {}, {}, {}'.format(dis_L, dis_ML, dis_MR, dis_R))
     """
     car_speed = max(left_speed,right_speed)
-    dis_LR_diff = (dis_L + dis_ML) - (dis_MR + dis_R)
+    dis_LR_diff = (dis_L +dis_FL + dis_ML) - (dis_MR + dis_FR + dis_R)
 
     basic_thld = vmap(car_speed, 0, MAX_SPEED, 450, 550)
     barrier_thld = vmap(car_speed, 0, MAX_SPEED, 450, 550) 
@@ -31,7 +31,8 @@ def tof10120_judgment(dis_L, dis_ML, dis_MR, dis_R, left_speed, right_speed):
     turn_thld = vmap(car_speed, 0, MAX_SPEED, 550, 750)
     turn_thld_m = vmap(car_speed, 0, MAX_SPEED, 750, 950)
 
-    if dis_L < basic_thld or dis_ML < basic_thld or dis_MR < basic_thld or dis_R < basic_thld: #如果任一tof偵測到距離<200mm
+    # 如果偵測到任一TOF < basic_thld
+    if dis_L < basic_thld or dis_FL < basic_thld or dis_ML < basic_thld or dis_MR < basic_thld or dis_FR < basic_thld or dis_R < basic_thld:
         if avoid_alertcnt > 0:
             avoid_alertcnt -= 1
     else:
@@ -60,12 +61,12 @@ def tof10120_judgment(dis_L, dis_ML, dis_MR, dis_R, left_speed, right_speed):
                 return AvoidanceAction.SPIN_RIGHT
             else: #右邊有障礙物
                 return AvoidanceAction.SPIN_LEFT
-        elif dis_L < back_thld or dis_ML < back_thld_m or dis_MR < back_thld_m or dis_R < back_thld:
+        elif dis_L < back_thld or dis_FL < back_thld or dis_ML < back_thld_m or dis_MR < back_thld_m or dis_FR < back_thld or dis_R < back_thld:
             if dis_LR_diff < 0: #左邊有障礙物
                 return AvoidanceAction.BACK_RIGHT
             else: #右邊有障礙物
                 return AvoidanceAction.BACK_LEFT
-        elif dis_L < turn_thld or dis_ML < turn_thld_m or dis_MR < turn_thld_m or dis_R < turn_thld:
+        elif dis_L < turn_thld or dis_FL < turn_thld or dis_ML < turn_thld_m or dis_MR < turn_thld_m or dis_FR<turn_thld or dis_R < turn_thld:
             if dis_LR_diff < 0: #左邊有障礙物
                 return AvoidanceAction.TURN_RIGHT
             else: #右邊有障礙物
