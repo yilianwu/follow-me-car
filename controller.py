@@ -17,10 +17,9 @@ import RPi.GPIO as GPIO
 
 ## LED strip constant
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(18, GPIO.OUT)
+GPIO.setup(RELAY_PIN, GPIO.OUT)
 
-NUM_LED = 100
-strip = apa102.APA102(num_led = 34, order = 'rgb')
+strip = apa102.APA102(num_led = LED_NUM, order = 'rgb')
 strip.clear_strip()
 
 sushi_white = 0x6083B6
@@ -34,6 +33,9 @@ avg_sum = 0
 avg_cur = 0
 last_angle = None
 last_angle_fail = 0
+
+start_time = time.time()
+relay_state = False #繼電器不斷路 NC
 
 stp_left = StepperController(
     StepDirDriver(6, 5),
@@ -73,37 +75,41 @@ class CarStatus(Enum):
         else:
             return "Unknown"
 
-## LED functions
+## LED function
 def ledpattern(dir="straight"):
     if dir == "left":
-        for i in range(0, int(NUM_LED/2)):
-            strip.set_pixel_rgb(i, sushi_white)
-
+        for i in range(0, LED_NUM):
+            if i <= int(LED_NUM/2):
+                strip.set_pixel_rgb(i, sushi_white)
+            else:
+                strip.set_pixel_rgb(i, black)
         strip.show()
-        # relay_on()
-
-        for i in range(0, int(NUM_LED/2)):
-            strip.set_pixel_rgb(i, black)
-
-        strip.show()
-        # relay_off()
     elif dir == "right":
-        for i in range(int(NUM_LED/2), NUM_LED):
-            strip.set_pixel_rgb(i, sushi_white)
-
+        for i in range(0, LED_NUM):
+            if i >= int(LED_NUM/2):
+                strip.set_pixel_rgb(i, sushi_white)
+            else:
+                strip.set_pixel_rgb(i, black)
         strip.show()
-        # relay_on()
-
-        for i in range(int(NUM_LED/2), NUM_LED):
-            strip.set_pixel_rgb(i, black)
-
-        strip.show()
-        # relay_off()
     else:
-        for i in range(0, NUM_LED):
+        for i in range(0, LED_NUM):
             strip.set_pixel_rgb(i, sushi_white)
         strip.show()
 
+## LED relay function
+def relay(rt):
+    global start_time
+    global relay_state
+    cur = time.time()
+    timer = cur - start_time
+    if timer > rt:
+        start_time = cur
+        if relay_state:
+            GPIO.output(RELAY_PIN, GPIO.LOW)
+            relay_state = False
+        else:
+            GPIO.output(RELAY_PIN, GPIO.HIGH)
+            relay_state = True
 
 ## Helper functions
 def car_spin_around(angual, speed=None):
@@ -241,22 +247,27 @@ def uwb_follow_control(distance, angual):
     try:
         stp_left.set_target_acceleration(ACCELER)
         stp_right.set_target_acceleration(ACCELER)
-        if factor['left'] == factor['right']:
+        if factor['left'] == factor['right']: # Car straight follow
+            global relay_state
             stp_left.set_target_speed(factor['left'] * MAX_SPEED) #left_wheel setMaxSpeed
             stp_right.set_target_speed(factor['right'] * MAX_SPEED) #right_wheel setMaxSpeed
             ledpattern()
-        elif factor['left'] > factor['right']:
+            GPIO.output(RELAY_PIN, GPIO.LOW)
+            relay_state = False
+        elif factor['left'] > factor['right']: # Car right follow
             stp_left.set_target_speed(factor['left'] * MAX_SPEED) #left_wheel setMaxSpeed
             stp_right.set_target_speed(factor['right'] * stp_left.current_speed) #right_wheel setMaxSpeed
             if angual < -(LED_ANG):
                 ledpattern("right")
+                relay(RELAY_TIME)
             else:
                 ledpattern()
-        else:
+        else: # Car left follow
             stp_right.set_target_speed(factor['right'] * MAX_SPEED) #left_wheel setMaxSpeed
             stp_left.set_target_speed(factor['left'] * stp_right.current_speed) #right_wheel setMaxSpeed
             if angual > LED_ANG:
                 ledpattern("left")
+                relay(RELAY_TIME)
             else:
                 ledpattern()
 
@@ -366,6 +377,7 @@ def loop():
                     uwb_follow_control(avg_distance, angual)
             elif car_status == CarStatus.AVOID:
                 #左右馬達還在執行
+                relay(RELAY_TIME)
                 time.sleep(0.001) #再給他一點時間
             elif car_status == CarStatus.SPINNING:
                 car_spin_around(angual)
