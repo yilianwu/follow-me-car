@@ -293,7 +293,7 @@ def state_transfer(old_status, distance, angual, bus):
         if distance > MAX_DISTANCE:
             return CarStatus.FOLLOWING
         ### 偵測是否跟隨方向
-        if angual < -20 or angual > 20:
+        if angual < -25 or angual > 25:
             stp_left.set_target_acceleration(SPIN_ACCELER)
             stp_right.set_target_acceleration(SPIN_ACCELER)
             return CarStatus.SPINNING
@@ -334,7 +334,7 @@ def state_transfer(old_status, distance, angual, bus):
             stp_right.set_target_acceleration(ACCELER)
             return CarStatus.FOLLOWING
         ### 偵測是否跟到了
-        if angual >= -20 and angual <= 20:
+        if angual >= -25 and angual <= 25:
             stp_left.set_target_acceleration(ACCELER)
             stp_right.set_target_acceleration(ACCELER)
             stp_left.stop()

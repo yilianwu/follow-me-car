@@ -36,12 +36,12 @@ def tof10120_judgment(dis_L, dis_FL, dis_ML, dis_MR, dis_FR, dis_R, left_speed, 
         if avoid_alertcnt > 0:
             avoid_alertcnt -= 1
     else:
-        if avoid_alertcnt < 3:
+        if avoid_alertcnt < 4:
             avoid_alertcnt += 1
     
     if avoid_alertcnt <= 0:
         avoid_alert = True
-    elif avoid_alertcnt >= 2:
+    elif avoid_alertcnt >= 3:
         avoid_alert = False
 
     if avoid_alert:
@@ -55,7 +55,7 @@ def tof10120_judgment(dis_L, dis_FL, dis_ML, dis_MR, dis_FR, dis_R, left_speed, 
         if dis_R < barrier_thld:
             spin_barrier += 1
 
-        if spin_barrier >= 4:
+        if spin_barrier >= 6:
             # 四周都有障礙，需要原地旋轉
             if dis_LR_diff < 0: #左邊有障礙物
                 return AvoidanceAction.SPIN_RIGHT
