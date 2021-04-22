@@ -22,14 +22,14 @@ def tof10120_judgment(dis_L, dis_FL, dis_ML, dis_MR, dis_FR, dis_R, left_speed, 
     car_speed = max(left_speed,right_speed)
     dis_LR_diff = (dis_L +dis_FL + dis_ML) - (dis_MR + dis_FR + dis_R)
 
-    basic_thld = vmap(car_speed, 0, MAX_SPEED, 550, 650)
-    barrier_thld = vmap(car_speed, 0, MAX_SPEED, 550, 650) 
-    barrier_thld_m = vmap(car_speed, 0, MAX_SPEED, 650, 850)
+    basic_thld = vmap(car_speed, 0, MAX_SPEED, 600, 750)
+    barrier_thld = vmap(car_speed, 0, MAX_SPEED, 600, 750) 
+    barrier_thld_m = vmap(car_speed, 0, MAX_SPEED, 700, 950)
 
-    back_thld = vmap(car_speed, 0, MAX_SPEED, 600, 700)
-    back_thld_m = vmap(car_speed, 0, MAX_SPEED, 550, 600)
-    turn_thld = vmap(car_speed, 0, MAX_SPEED, 650, 850)
-    turn_thld_m = vmap(car_speed, 0, MAX_SPEED, 850, 1050)
+    back_thld = vmap(car_speed, 0, MAX_SPEED, 650, 800)
+    back_thld_m = vmap(car_speed, 0, MAX_SPEED, 600, 700)
+    turn_thld = vmap(car_speed, 0, MAX_SPEED, 700, 900)
+    turn_thld_m = vmap(car_speed, 0, MAX_SPEED, 900, 1150)
 
     # 如果偵測到任一TOF < basic_thld
     if dis_L < basic_thld or dis_FL < basic_thld or dis_ML < basic_thld or dis_MR < basic_thld or dis_FR < basic_thld or dis_R < basic_thld:
