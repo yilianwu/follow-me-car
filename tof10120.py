@@ -14,7 +14,10 @@ def read_raw_distance(bus: SMBus, devaddr): #讀取實時距離
 
 def read_filtered_distance(bus: SMBus, devaddr): #讀取濾波距離
     data = bus.read_i2c_block_data(devaddr, REGADDR_DIS_FILTER, 2)
-    return int.from_bytes(data, 'big')
+    value = int.from_bytes(data, 'big')
+    if value > 2000:
+        raise Exception('tof value greater than 2000')
+    return value
 
 def read_distance_offset(bus: SMBus, devaddr): #讀取距離偏差
     data = bus.read_i2c_block_data(devaddr, REGADDR_DIS_OFFSET, 2)
