@@ -49,13 +49,16 @@ class TuiApp():
 
         UWBDATA_Y = 1
         self.window.add(2,  UWBDATA_Y, WFrame(44, 4, "UWB Data"))
-        self.window.add(12, UWBDATA_Y + 1, WLabel("Distance"))
-        self.window.add(30, UWBDATA_Y + 1, WLabel("Angual"))
+        self.window.add(6, UWBDATA_Y + 1, WLabel("Distance"))
+        self.window.add(18, UWBDATA_Y + 1, WLabel("Angual"))
+        self.window.add(30, UWBDATA_Y + 1, WLabel("Updated"))
         ## Value
         self.lbl_uwb_dist = FormatLabel("{:8.1f}", 0.0)
         self.lbl_uwb_ang = FormatLabel("{:6.1f}", 0)
-        self.window.add(12, UWBDATA_Y + 2, self.lbl_uwb_dist)
-        self.window.add(30, UWBDATA_Y + 2, self.lbl_uwb_ang)
+        self.lbl_uwb_time = FormatLabel("{:5.2f}s", 0)
+        self.window.add(6, UWBDATA_Y + 2, self.lbl_uwb_dist)
+        self.window.add(18, UWBDATA_Y + 2, self.lbl_uwb_ang)
+        self.window.add(30, UWBDATA_Y + 2, self.lbl_uwb_time)
 
         TOFDATA_Y = 6
         self.window.add(2,  TOFDATA_Y, WFrame(44, 4, "TOF Data"))
@@ -114,9 +117,10 @@ class TuiApp():
     def stop(self):
         self.stopping = True
 
-    def update_uwb(self, distance, angual):
+    def update_uwb(self, distance, angual, uwb_time):
         self.lbl_uwb_dist.update_value(distance)
         self.lbl_uwb_ang.update_value(angual)
+        self.lbl_uwb_time.update_value(time.time() - uwb_time)
 
     def update_tof(self, tof_l, tof_fl, tof_ml, tof_mr, tof_fr, tof_r):
         if tof_l != None:

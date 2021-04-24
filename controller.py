@@ -34,6 +34,7 @@ avg_cur = 0
 last_angle = None
 last_angle_fail = 0
 
+uwb_time = 0
 start_time = time.time()
 relay_state = False #繼電器不斷路 NC
 
@@ -298,6 +299,11 @@ def state_transfer(old_status, distance, angual, bus):
             stp_right.set_target_acceleration(SPIN_ACCELER)
             return CarStatus.SPINNING
     elif old_status == CarStatus.FOLLOWING:
+        ### 偵測是否沒資料
+        if time.time() - uwb_time >= 2.0:
+            stp_left.stop()
+            stp_right.stop()
+            return CarStatus.STANDBY
         ### 偵測是否停下
         if distance <= MIN_DISTANCE:
             stp_left.stop()
@@ -345,6 +351,7 @@ def state_transfer(old_status, distance, angual, bus):
     return old_status
 
 def loop():
+    global uwb_time
     angual = 0
     avg_distance = 0
     uwbdata_updated = False     #表示本次執行是否有讀到uwb資料
@@ -361,6 +368,7 @@ def loop():
                 angual = angle_filtering(angual)
                 avg_distance = avg_dist(distance)
                 uwbdata_updated = True
+                uwb_time = time.time()
             except RuntimeError:
                 print("invalid UWB value")
             except BlockingIOError:
@@ -385,7 +393,7 @@ def loop():
             ## 負責更新TUI的數值，如果有的話
             if tuiapp is not None:
                 if uwbdata_updated:
-                    tuiapp.update_uwb(avg_distance, angual)
+                    tuiapp.update_uwb(avg_distance, angual, uwb_time)
                 tuiapp.update_status(car_status)
                 tuiapp.update_stepper(stp_left, stp_right)
                 tuiapp.loop_once()
