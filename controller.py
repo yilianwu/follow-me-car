@@ -12,20 +12,7 @@ from tof10120 import read_filtered_distance
 from avoidance import AvoidanceAction, tof10120_judgment
 from smbus import SMBus
 from enum import Enum
-from apa102_pi.driver import apa102
 import RPi.GPIO as GPIO
-
-## LED strip constant
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(RELAY_PIN, GPIO.OUT)
-
-strip = apa102.APA102(num_led = LED_NUM, order = 'rgb')
-strip.clear_strip()
-
-sushi_white = 0x6083B6
-sushi_blue = 0x000A42
-black = 0x000000
-## LED strip constant
 
 avg_count = 0
 avg_last = 0
@@ -35,8 +22,6 @@ last_angle = None
 last_angle_fail = 0
 
 uwb_time = 0
-start_time = time.time()
-relay_state = False #繼電器不斷路 NC
 
 stp_left = StepperController(
     StepDirDriver(6, 5),
@@ -75,42 +60,6 @@ class CarStatus(Enum):
             return "Spinning"
         else:
             return "Unknown"
-
-## LED function
-def ledpattern(dir="straight"):
-    if dir == "left":
-        for i in range(0, LED_NUM):
-            if i <= int(LED_NUM/2):
-                strip.set_pixel_rgb(i, sushi_white)
-            else:
-                strip.set_pixel_rgb(i, black)
-        strip.show()
-    elif dir == "right":
-        for i in range(0, LED_NUM):
-            if i >= int(LED_NUM/2):
-                strip.set_pixel_rgb(i, sushi_white)
-            else:
-                strip.set_pixel_rgb(i, black)
-        strip.show()
-    else:
-        for i in range(0, LED_NUM):
-            strip.set_pixel_rgb(i, sushi_white)
-        strip.show()
-
-## LED relay function
-def relay(rt):
-    global start_time
-    global relay_state
-    cur = time.time()
-    timer = cur - start_time
-    if timer > rt:
-        start_time = cur
-        if relay_state:
-            GPIO.output(RELAY_PIN, GPIO.LOW)
-            relay_state = False
-        else:
-            GPIO.output(RELAY_PIN, GPIO.HIGH)
-            relay_state = True
 
 ## Helper functions
 def car_spin_around(angual, speed=None):
@@ -206,30 +155,24 @@ def tof_avoid_control(action: AvoidanceAction):
     if action == AvoidanceAction.SPIN_LEFT or action == AvoidanceAction.SPIN_RIGHT: #向左自轉or向右自轉 避障
         if action == AvoidanceAction.SPIN_LEFT:
             car_spin_around(TOF_SPIN_ANG, TOF_SPEED)
-            ledpattern("left")
         else:
             car_spin_around(-TOF_SPIN_ANG, TOF_SPEED)
-            ledpattern("right")
     elif action == AvoidanceAction.BACK_LEFT or action == AvoidanceAction.BACK_RIGHT: #右輪不動左輪反轉or左輪不動右輪反轉 避障
         stp_left.set_target_speed(TOF_SPEED)
         stp_right.set_target_speed(TOF_SPEED)
         step_to_spin = int((TURN_AROUND_DIST * (TOF_BACK_ANG/180) * PPR) / (WHEEL_DIAM * math.pi))
         if action == AvoidanceAction.BACK_LEFT:
             stp_left.move(-step_to_spin)
-            ledpattern("left")
         else:
             stp_right.move(-step_to_spin)
-            ledpattern("right")
     elif action == AvoidanceAction.TURN_LEFT or action == AvoidanceAction.TURN_RIGHT: #左輪不動右輪正轉(車體向左轉)or右輪不動左輪正轉(車體向右轉) 避障
         stp_left.set_target_speed(TOF_SPEED)
         stp_right.set_target_speed(TOF_SPEED)
         step_to_spin = int((TURN_AROUND_DIST * (TOF_TURN_ANG/180) * PPR) / (WHEEL_DIAM * math.pi))
         if action == AvoidanceAction.TURN_LEFT:
             stp_right.move(step_to_spin)
-            ledpattern("left")
         else:
             stp_left.move(step_to_spin)
-            ledpattern("right")
     """
     print("Steps: {}, {}; Speed: {}, {}; TargetSpeed: {}, {}".format(
         stp_left.steps_to_go,
@@ -249,28 +192,14 @@ def uwb_follow_control(distance, angual):
         stp_left.set_target_acceleration(ACCELER)
         stp_right.set_target_acceleration(ACCELER)
         if factor['left'] == factor['right']: # Car straight follow
-            global relay_state
             stp_left.set_target_speed(factor['left'] * MAX_SPEED) #left_wheel setMaxSpeed
             stp_right.set_target_speed(factor['right'] * MAX_SPEED) #right_wheel setMaxSpeed
-            ledpattern()
-            GPIO.output(RELAY_PIN, GPIO.LOW)
-            relay_state = False
         elif factor['left'] > factor['right']: # Car right follow
             stp_left.set_target_speed(factor['left'] * MAX_SPEED) #left_wheel setMaxSpeed
             stp_right.set_target_speed(factor['right'] * stp_left.current_speed) #right_wheel setMaxSpeed
-            if angual < -(LED_ANG):
-                ledpattern("right")
-                relay(RELAY_TIME)
-            else:
-                ledpattern()
         else: # Car left follow
             stp_right.set_target_speed(factor['right'] * MAX_SPEED) #left_wheel setMaxSpeed
             stp_left.set_target_speed(factor['left'] * stp_right.current_speed) #right_wheel setMaxSpeed
-            if angual > LED_ANG:
-                ledpattern("left")
-                relay(RELAY_TIME)
-            else:
-                ledpattern()
 
     except ZeroDivisionError:
         pass
@@ -385,7 +314,6 @@ def loop():
                     uwb_follow_control(avg_distance, angual)
             elif car_status == CarStatus.AVOID:
                 #左右馬達還在執行
-                relay(RELAY_TIME)
                 time.sleep(0.001) #再給他一點時間
             elif car_status == CarStatus.SPINNING:
                 car_spin_around(angual)
