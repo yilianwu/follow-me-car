@@ -299,7 +299,8 @@ def loop():
                 uwbdata_updated = True
                 uwb_time = time.time()
             except RuntimeError:
-                print("invalid UWB value")
+                #print("invalid UWB value")
+                pass
             except BlockingIOError:
                 pass
 
@@ -320,8 +321,7 @@ def loop():
 
             ## 負責更新TUI的數值，如果有的話
             if tuiapp is not None:
-                if uwbdata_updated:
-                    tuiapp.update_uwb(avg_distance, angual, uwb_time)
+                tuiapp.update_uwb(avg_distance, angual, uwb_time)
                 tuiapp.update_status(car_status)
                 tuiapp.update_stepper(stp_left, stp_right)
                 tuiapp.loop_once()
