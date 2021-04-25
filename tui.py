@@ -123,7 +123,7 @@ class TuiApp():
         uwb_timespan = time.time() - uwb_time
         if uwb_timespan < 10000:
             self.lbl_uwb_time.update_value(uwb_timespan)
-        else
+        else :
             self.lbl_uwb_time.update_value(float('NaN'))
 
     def update_tof(self, tof_l, tof_fl, tof_ml, tof_mr, tof_fr, tof_r):
