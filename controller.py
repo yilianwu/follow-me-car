@@ -228,11 +228,6 @@ def state_transfer(old_status, distance, angual, bus):
             stp_right.set_target_acceleration(SPIN_ACCELER)
             return CarStatus.SPINNING
     elif old_status == CarStatus.FOLLOWING:
-        ### 偵測是否沒資料
-        if time.time() - uwb_time >= 2.0:
-            stp_left.stop()
-            stp_right.stop()
-            return CarStatus.STANDBY
         ### 偵測是否停下
         if distance <= MIN_DISTANCE:
             stp_left.stop()
@@ -305,7 +300,11 @@ def loop():
                 pass
 
             ## 這裡負責狀態的變換以及切換時的指令
-            car_status = state_transfer(car_status, avg_distance, angual, bus)
+            ### 偵測是否沒資料
+            if time.time() - uwb_time < 2.0:
+                car_status = state_transfer(car_status, avg_distance, angual, bus)
+            else:
+                car_status = state_transfer(car_status, 0, 0, bus)
 
             ## 這裡負責該狀態的工作
             if car_status == CarStatus.STANDBY:
