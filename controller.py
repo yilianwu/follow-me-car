@@ -66,7 +66,7 @@ def car_spin_around(angual, speed=None):
     if speed != None:
         stp_left.set_target_speed(speed)
         stp_right.set_target_speed(speed)
-    step_to_spin = int((SPIN_AROUND_DIST * (angual/180) * PPR) / (WHEEL_DIAM * math.pi))
+    step_to_spin = int((SPIN_AROUND_DIST * (angual * SPIN_BUFFER / 180) * PPR) / (WHEEL_DIAM * math.pi))
     stp_left.move(-step_to_spin)
     stp_right.move(step_to_spin)
 
@@ -103,8 +103,8 @@ def ctrl_dir(ang):
         speed_factor = TURNING_ANGLE_PN30
     elif ang <= -20 or ang >= 20:
         speed_factor = TURNING_ANGLE_PN20
-    elif ang <= -8 or ang >= 8:
-        speed_factor = TURNING_ANGLE_PN8
+    elif ang <= -10 or ang >= 10:
+        speed_factor = TURNING_ANGLE_PN10
     else:
         speed_factor = 1
 
@@ -223,7 +223,7 @@ def state_transfer(old_status, distance, angual, bus):
         if distance > MAX_DISTANCE:
             return CarStatus.FOLLOWING
         ### 偵測是否跟隨方向
-        if distance > STOP_DISTANCE and (angual < -25 or angual > 25):
+        if distance > STOP_DISTANCE and (angual < -SPIN_ANGUAL or angual > SPIN_ANGUAL):
             stp_left.set_target_acceleration(SPIN_ACCELER)
             stp_right.set_target_acceleration(SPIN_ACCELER)
             return CarStatus.SPINNING
@@ -264,7 +264,7 @@ def state_transfer(old_status, distance, angual, bus):
             stp_right.set_target_acceleration(ACCELER)
             return CarStatus.FOLLOWING
         ### 偵測是否跟到了
-        if not (distance > STOP_DISTANCE and (angual < -25 or angual > 25)):
+        if not (distance > STOP_DISTANCE and (angual < -SPIN_ANGUAL or angual > SPIN_ANGUAL)):
             stp_left.set_target_acceleration(ACCELER)
             stp_right.set_target_acceleration(ACCELER)
             stp_left.stop()
@@ -301,7 +301,7 @@ def loop():
 
             ## 這裡負責狀態的變換以及切換時的指令
             ### 偵測是否沒資料
-            if time.time() - uwb_time < 2.0:
+            if time.time() - uwb_time < 1.5:
                 car_status = state_transfer(car_status, avg_distance, angual, bus)
             else:
                 car_status = state_transfer(car_status, 0, 0, bus)
