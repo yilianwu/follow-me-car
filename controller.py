@@ -103,8 +103,8 @@ def ctrl_dir(ang):
         speed_factor = TURNING_ANGLE_PN30
     elif ang <= -20 or ang >= 20:
         speed_factor = TURNING_ANGLE_PN20
-    elif ang <= -10 or ang >= 10:
-        speed_factor = TURNING_ANGLE_PN10
+    elif ang <= -8 or ang >= 8:
+        speed_factor = TURNING_ANGLE_PN8
     else:
         speed_factor = 1
 
@@ -316,7 +316,7 @@ def loop():
                 #左右馬達還在執行
                 time.sleep(0.001) #再給他一點時間
             elif car_status == CarStatus.SPINNING:
-                car_spin_around(angual)
+                car_spin_around(angual, SPIN_SPEED)
 
             ## 負責更新TUI的數值，如果有的話
             if tuiapp is not None:
