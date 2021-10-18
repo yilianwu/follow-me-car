@@ -1,4 +1,9 @@
 import math
+
+# 移動指令的有效期限
+# 設為 None 讓車子保證會移動指定的距離
+MOVE_CMD_EXPIRES = 1.5
+
 TOF_L_I2C_ADDRESS = 0x53
 TOF_FL_I2C_ADDRESS = 0x54
 TOF_ML_I2C_ADDRESS = 0x55

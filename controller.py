@@ -5,9 +5,7 @@ from constant import *
 import serial, time
 import asyncio
 from contextlib import suppress
-from concurrent.futures import ThreadPoolExecutor
 import math
-import uwb_data as uwb
 from tof10120 import read_filtered_distance
 from avoidance import AvoidanceAction, tof10120_judgment
 from smbus import SMBus
@@ -20,8 +18,6 @@ avg_sum = 0
 avg_cur = 0
 last_angle = None
 last_angle_fail = 0
-
-uwb_time = 0
 
 stp_left = StepperController(
     StepDirDriver(6, 5),
@@ -39,8 +35,6 @@ stp_left.set_target_acceleration(ACCELER)
 stp_left.set_target_speed(MAX_SPEED)
 stp_right.set_target_acceleration(ACCELER)
 stp_right.set_target_speed(MAX_SPEED)
-
-tuiapp = None
 
 ## State Machine
 class CarStatus(Enum):
@@ -72,22 +66,6 @@ def car_spin_around(angual, speed=None):
 
 ########################
 
-def avg_dist(d):
-    global avg_count
-    global avg_last
-    global avg_sum
-    global avg_cur
-
-    if avg_count >= 5:
-        avg_last = avg_sum / 5
-        avg_sum = 0
-        avg_count = 0
-    avg_sum += d
-    avg_count += 1
-
-    avg_cur = avg_sum / avg_count
-    return ((avg_last + avg_cur) / 2)
-
 def ctrl_dir(ang):
     if ang <= -80 or ang >=80:
         speed_factor = TURNING_ANGLE_PN80
@@ -112,38 +90,6 @@ def ctrl_dir(ang):
         return {'left':speed_factor, 'right':1.0}
     else: #人在右邊->右轉
         return {'left':1.0, 'right':speed_factor}
-
-def angle_filtering(ang):
-    global last_angle
-    global last_angle_fail
-
-    if last_angle == None:
-        last_angle = ang
-        return ang
-    same_sign = (last_angle * ang) > 0 #bool same_sign 1->同向 0->不同向
-    angle_diff = (ang - last_angle)
-    if same_sign: #如果兩次讀到的角度方向相同
-        if abs(angle_diff) > ANGLE_FILTER_SDIM: #同相位角度差是否大於最大容許值
-            retval = last_angle * (1 - ANGLE_FILTER_SFAIL) + ang * ANGLE_FILTER_SFAIL #依比例計算return value
-            last_angle_fail += 1 #failed_counter++
-        else:
-            retval = ang
-            last_angle = ang
-            last_angle_fail = 0
-    else: #如果兩次讀到的角度方向不同
-        if abs(angle_diff) > ANGLE_FILTER_NDIM: #不同相位角度差是否大於最大容許值
-            retval = last_angle * (1 - ANGLE_FILTER_NFAIL) + ang * ANGLE_FILTER_NFAIL #依比例計算return value
-            last_angle_fail += 1
-        else:
-            retval = ang
-            last_angle = ang
-            last_angle_fail = 0 #failed_counter++
-
-    if last_angle_fail >= ANGLE_FILTER_MAXFAIL:
-        retval = ang
-        last_angle = ang
-
-    return retval
 
 def tof_avoid_control(action: AvoidanceAction):
     stp_left.stop()
@@ -184,7 +130,7 @@ def tof_avoid_control(action: AvoidanceAction):
     ))
     """
 
-def uwb_follow_control(distance, angual):
+def move_control(distance, angual):
     distanceToFollow = distance - MIN_DISTANCE
     stepToFollow = int((distanceToFollow * PPR) / (WHEEL_DIAM * math.pi))
     factor = ctrl_dir(angual)
@@ -275,57 +221,38 @@ def state_transfer(old_status, distance, angual, bus):
     return old_status
 
 def loop():
-    global uwb_time
     angual = 0
     avg_distance = 0
-    uwbdata_updated = False     #表示本次執行是否有讀到uwb資料
     car_status = CarStatus.STANDBY
+    last_move_time = 0
+    move_updated = False
 
     bus = SMBus(1)
-    with serial.Serial('/dev/ttyS0', 115200) as ser:
-        while (tuiapp is None) or (not tuiapp.stopping):
-            #print("Reading uwb serial", end='')
-            try:
-                angual, distance = uwb.ser_read(ser)
+    while (tuiapp is None) or (not tuiapp.stopping):
+        try:
+            # TODO: Process command queue
+            pass
+        except:
+            pass
 
-                #print("angual: {}, distance: {}".format(angual,distance))
-                angual = angle_filtering(angual)
-                avg_distance = avg_dist(distance)
-                uwbdata_updated = True
-                uwb_time = time.time()
-            except RuntimeError:
-                #print("invalid UWB value")
-                pass
-            except BlockingIOError:
-                pass
+        ## 這裡負責狀態的變換以及切換時的指令
+        ### 偵測是否沒資料
+        if time.time() - last_move_time < MOVE_CMD_EXPIRES:
+            car_status = state_transfer(car_status, avg_distance, angual, bus)
+        else:
+            car_status = state_transfer(car_status, 0, 0, bus)
 
-            ## 這裡負責狀態的變換以及切換時的指令
-            ### 偵測是否沒資料
-            if time.time() - uwb_time < 1.5:
-                car_status = state_transfer(car_status, avg_distance, angual, bus)
-            else:
-                car_status = state_transfer(car_status, 0, 0, bus)
-
-            ## 這裡負責該狀態的工作
-            if car_status == CarStatus.STANDBY:
-                pass
-            elif car_status == CarStatus.FOLLOWING:
-                if uwbdata_updated:
-                    uwb_follow_control(avg_distance, angual)
-            elif car_status == CarStatus.AVOID:
-                #左右馬達還在執行
-                time.sleep(0.001) #再給他一點時間
-            elif car_status == CarStatus.SPINNING:
-                car_spin_around(angual, SPIN_SPEED)
-
-            ## 負責更新TUI的數值，如果有的話
-            if tuiapp is not None:
-                tuiapp.update_uwb(avg_distance, angual, uwb_time)
-                tuiapp.update_status(car_status)
-                tuiapp.update_stepper(stp_left, stp_right)
-                tuiapp.loop_once()
-
-            uwbdata_updated = False
+        ## 這裡負責該狀態的工作
+        if car_status == CarStatus.STANDBY:
+            pass
+        elif car_status == CarStatus.FOLLOWING:
+            if move_updated:
+                move_control(avg_distance, angual)
+        elif car_status == CarStatus.AVOID:
+            #左右馬達還在執行
+            time.sleep(0.001) #再給他一點時間
+        elif car_status == CarStatus.SPINNING:
+            car_spin_around(angual, SPIN_SPEED)
 
 def main():
     stp_left.spawn()
@@ -338,11 +265,6 @@ def main():
 
     stp_left.terminate()
     stp_right.terminate()
-
-def tui_main(app):
-    global tuiapp
-    tuiapp = app
-    main()
 
 if __name__ == '__main__':
     main()
