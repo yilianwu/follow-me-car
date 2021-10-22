@@ -56,6 +56,10 @@ class CarContext:
         self.stp_left.set_target_acceleration(accel)
         self.stp_right.set_target_acceleration(accel)
 
+    def set_acceleration(self, left, right):
+        self.stp_left.set_target_acceleration(left)
+        self.stp_right.set_target_acceleration(right)
+
     def set_speed(self, speed):
         self.stp_left.set_target_speed(speed)
         self.stp_right.set_target_speed(speed)

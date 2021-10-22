@@ -34,9 +34,9 @@ def ctrl_dir(ang):
         speed_factor = 1
 
     if ang > 0 : #人在左邊->左轉
-        return {'left':speed_factor, 'right':1.0}
+        return speed_factor, 1.0
     else: #人在右邊->右轉
-        return {'left':1.0, 'right':speed_factor}
+        return 1.0, speed_factor
 
 def tof_avoid_control(car: CarContext, action: AvoidanceAction):
     car.stop(reset=True)
@@ -64,19 +64,13 @@ def tof_avoid_control(car: CarContext, action: AvoidanceAction):
 def move_control(car, distance, angual):
     distanceToFollow = distance - MIN_DISTANCE
     stepToFollow = int((distanceToFollow * PPR) / (WHEEL_DIAM * math.pi))
-    factor = ctrl_dir(angual)
+    factor_left, factor_right = ctrl_dir(angual)
     try:
-        car.set_acceleration(ACCELER)
-        if factor['left'] == factor['right']: # Car straight follow
-            car.set_speed(factor['left'] * MAX_SPEED)
-        elif factor['left'] > factor['right']: # Car right follow
-            car.set_speed(factor['left'] * MAX_SPEED, factor['right'] * car.stp_left.current_speed)
-        else: # Car left follow
-            car.set_speed(factor['left'] * car.stp_right.current_speed, factor['right'] * MAX_SPEED)
-
+        car.set_acceleration(factor_left * ACCELER, factor_right * ACCELER)
+        car.set_speed(factor_left * MAX_SPEED, factor_right * MAX_SPEED)
+        car.move(factor_left * stepToFollow, factor_right * stepToFollow)
     except ZeroDivisionError:
         pass
-    car.move(stepToFollow)
 
 def state_transfer(car: CarContext, distance, angual, bus):
     old_status = car.status
@@ -131,8 +125,8 @@ def state_transfer(car: CarContext, distance, angual, bus):
     return old_status
 
 def loop(car: CarContext):
-    angual = 0
-    avg_distance = 0
+    target_angual = 0
+    target_distance = 0
     last_move_time = 0
     move_updated = False
 
@@ -147,7 +141,7 @@ def loop(car: CarContext):
         ## 這裡負責狀態的變換以及切換時的指令
         ### 偵測是否沒資料
         if MOVE_CMD_EXPIRES == None or (time.time() - last_move_time) < MOVE_CMD_EXPIRES:
-            car.status = state_transfer(car, avg_distance, angual, bus)
+            car.status = state_transfer(car, target_distance, target_angual, bus)
         else:
             car.status = state_transfer(car, 0, 0, bus)
 
@@ -156,12 +150,12 @@ def loop(car: CarContext):
             pass
         elif car.status == CarStatus.FOLLOWING:
             if move_updated:
-                move_control(car, avg_distance, angual)
+                move_control(car, target_distance, target_angual)
         elif car.status == CarStatus.AVOID:
             #左右馬達還在執行
             time.sleep(0.001) #再給他一點時間
         elif car.status == CarStatus.SPINNING:
-            car.spin_around(angual, SPIN_SPEED)
+            car.spin_around(target_angual, SPIN_SPEED)
 
 def main():
     car = CarContext(StepDirDriver(6, 5), StepDirDriver(24, 23))
