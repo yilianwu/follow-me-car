@@ -1,3 +1,5 @@
+import time
+
 from steppyr import StepperController, DIRECTION_CW, DIRECTION_CCW
 from steppyr.profiles.accel import AccelProfile
 from steppyr.drivers import Driver
@@ -34,6 +36,11 @@ class CarContext:
             AccelProfile(),
         )
         self.status = CarStatus.STANDBY
+        # Moving target
+        self.__move_angual = 0
+        self.__move_distance = 0
+        self.__move_lasttime = 0
+        self.__move_needupdate = False
 
     def activate(self):
         self.stp_left.spawn()
@@ -92,4 +99,39 @@ class CarContext:
         self.stp_left.move(-step_to_spin)
         self.stp_right.move(step_to_spin)
 
+    ## Move target
+    @property
+    def move_angual(self):
+        ### 偵測是否沒資料
+        if MOVE_CMD_EXPIRES == None or (time.time() - self.__move_lasttime) < MOVE_CMD_EXPIRES:
+            return self.__move_angual
+        else:
+            return 0
+
+    @move_angual.setter
+    def move_angual(self, value):
+        self.__move_angual = value
+        self.__move_lasttime = time.time()
+        self.__move_needupdate = True
+
+    @property
+    def move_distance(self):
+        ### 偵測是否沒資料
+        if MOVE_CMD_EXPIRES == None or (time.time() - self.__move_lasttime) < MOVE_CMD_EXPIRES:
+            return self.__move_distance
+        else:
+            return 0
+
+    @move_distance.setter
+    def move_distance(self, value):
+        self.__move_distance = value
+        self.__move_lasttime = time.time()
+        self.__move_needupdate = True
+
+    @property
+    def move_needupdate(self):
+        return self.__move_needupdate
+
+    def move_resetupdate(self):
+        self.__move_needupdate = False
 

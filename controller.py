@@ -61,18 +61,24 @@ def tof_avoid_control(car: CarContext, action: AvoidanceAction):
         else:
             car.move(step_to_spin, 0)
 
-def move_control(car, distance, angual):
-    distanceToFollow = distance - MIN_DISTANCE
+def move_control(car: CarContext):
+    if not car.move_needupdate:
+        return
+
+    distanceToFollow = car.move_distance - MIN_DISTANCE
     stepToFollow = int((distanceToFollow * PPR) / (WHEEL_DIAM * math.pi))
-    factor_left, factor_right = ctrl_dir(angual)
+    factor_left, factor_right = ctrl_dir(car.move_angual)
     try:
         car.set_acceleration(factor_left * ACCELER, factor_right * ACCELER)
         car.set_speed(factor_left * MAX_SPEED, factor_right * MAX_SPEED)
         car.move(factor_left * stepToFollow, factor_right * stepToFollow)
+        car.move_resetupdate()
     except ZeroDivisionError:
         pass
 
-def state_transfer(car: CarContext, distance, angual, bus):
+def state_transfer(car: CarContext, bus: SMBus):
+    distance = car.move_distance
+    angual = car.move_angual
     old_status = car.status
 
     if old_status == CarStatus.STANDBY:
@@ -125,11 +131,6 @@ def state_transfer(car: CarContext, distance, angual, bus):
     return old_status
 
 def loop(car: CarContext):
-    target_angual = 0
-    target_distance = 0
-    last_move_time = 0
-    move_updated = False
-
     bus = SMBus(1)
     while True:
         try:
@@ -139,23 +140,18 @@ def loop(car: CarContext):
             pass
 
         ## 這裡負責狀態的變換以及切換時的指令
-        ### 偵測是否沒資料
-        if MOVE_CMD_EXPIRES == None or (time.time() - last_move_time) < MOVE_CMD_EXPIRES:
-            car.status = state_transfer(car, target_distance, target_angual, bus)
-        else:
-            car.status = state_transfer(car, 0, 0, bus)
+        car.status = state_transfer(car, bus)
 
         ## 這裡負責該狀態的工作
         if car.status == CarStatus.STANDBY:
             pass
         elif car.status == CarStatus.FOLLOWING:
-            if move_updated:
-                move_control(car, target_distance, target_angual)
+            move_control(car)
         elif car.status == CarStatus.AVOID:
             #左右馬達還在執行
             time.sleep(0.001) #再給他一點時間
         elif car.status == CarStatus.SPINNING:
-            car.spin_around(target_angual, SPIN_SPEED)
+            car.spin_around(car.move_angual, SPIN_SPEED)
 
 def main():
     car = CarContext(StepDirDriver(6, 5), StepDirDriver(24, 23))
