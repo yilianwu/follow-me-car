@@ -1,4 +1,5 @@
 import asyncio
+import aiohttp
 import math
 import time
 from enum import Enum
@@ -12,6 +13,7 @@ from constant import *
 from tof10120 import read_filtered_distance
 from avoidance import AvoidanceAction, tof10120_judgment
 from car import CarContext, CarStatus
+from server import start_server
 
 def ctrl_dir(ang):
     if ang <= -80 or ang >=80:
@@ -130,7 +132,7 @@ def state_transfer(car: CarContext, bus: SMBus):
     ## 如果狀態沒改變，回傳原來的值
     return old_status
 
-def loop(car: CarContext):
+async def loop(car: CarContext):
     bus = SMBus(1)
     while True:
         try:
@@ -144,28 +146,32 @@ def loop(car: CarContext):
 
         ## 這裡負責該狀態的工作
         if car.status == CarStatus.STANDBY:
-            pass
+            await asyncio.sleep(0)
         elif car.status == CarStatus.FOLLOWING:
             move_control(car)
         elif car.status == CarStatus.AVOID:
             #左右馬達還在執行
-            time.sleep(0.001) #再給他一點時間
+            await asyncio.sleep(0.001) #再給他一點時間
         elif car.status == CarStatus.SPINNING:
             car.spin_around(car.move_angual, SPIN_SPEED)
+        await asyncio.sleep(0)
 
-def main():
+async def main():
     car = CarContext(StepDirDriver(6, 5), StepDirDriver(24, 23))
     car.set_acceleration(ACCELER)
     car.set_speed(MAX_SPEED)
     car.activate()
+    
+    cmd_queue = asyncio.Queue()
+    await start_server(cmd_queue)
 
     try:
-        loop(car)
+        await loop(car)
     except KeyboardInterrupt:
         pass
 
     car.deactivate()
 
 if __name__ == '__main__':
-    main()
+    asyncio.run(main())
 
