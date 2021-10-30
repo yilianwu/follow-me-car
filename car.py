@@ -1,3 +1,4 @@
+from enum import Enum
 import time
 
 from steppyr import StepperController, DIRECTION_CW, DIRECTION_CCW
@@ -63,7 +64,7 @@ class CarContext:
         self.stp_left.set_target_acceleration(accel)
         self.stp_right.set_target_acceleration(accel)
 
-    def set_acceleration(self, left, right):
+    def set_acceleration_lr(self, left, right):
         self.stp_left.set_target_acceleration(left)
         self.stp_right.set_target_acceleration(right)
 
@@ -71,7 +72,7 @@ class CarContext:
         self.stp_left.set_target_speed(speed)
         self.stp_right.set_target_speed(speed)
 
-    def set_speed(self, left, right):
+    def set_speed_lr(self, left, right):
         self.stp_left.set_target_speed(left)
         self.stp_right.set_target_speed(right)
 
@@ -80,7 +81,7 @@ class CarContext:
         self.stp_left.move(steps)
         self.stp_right.move(steps)
 
-    def move(self, left, right):
+    def move_lr(self, left, right):
         self.stp_left.move(left)
         self.stp_right.move(right)
 
@@ -92,7 +93,7 @@ class CarContext:
             self.stp_right.set_current_steps(0)
 
     def spin_around(self, angual, speed=None):
-        if speed != None:
+        if speed is not None:
             self.stp_left.set_target_speed(speed)
             self.stp_right.set_target_speed(speed)
         step_to_spin = int((SPIN_AROUND_DIST * (angual * SPIN_BUFFER / 180) * PPR) / (WHEEL_DIAM * math.pi))
@@ -103,7 +104,7 @@ class CarContext:
     @property
     def move_angual(self):
         ### 偵測是否沒資料
-        if MOVE_CMD_EXPIRES == None or (time.time() - self.__move_lasttime) < MOVE_CMD_EXPIRES:
+        if MOVE_CMD_EXPIRES is None or (time.time() - self.__move_lasttime) < MOVE_CMD_EXPIRES:
             return self.__move_angual
         else:
             return 0
@@ -117,7 +118,7 @@ class CarContext:
     @property
     def move_distance(self):
         ### 偵測是否沒資料
-        if MOVE_CMD_EXPIRES == None or (time.time() - self.__move_lasttime) < MOVE_CMD_EXPIRES:
+        if MOVE_CMD_EXPIRES is None or (time.time() - self.__move_lasttime) < MOVE_CMD_EXPIRES:
             return self.__move_distance
         else:
             return 0

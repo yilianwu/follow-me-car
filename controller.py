@@ -1,8 +1,5 @@
 import asyncio
-import aiohttp
 import math
-import time
-from enum import Enum
 from steppyr import StepperController, DIRECTION_CW, DIRECTION_CCW
 from steppyr.profiles.accel import AccelProfile
 from steppyr.drivers.stepdir import StepDirDriver
@@ -52,16 +49,16 @@ def tof_avoid_control(car: CarContext, action: AvoidanceAction):
         car.set_speed(TOF_SPEED)
         step_to_spin = int((TURN_AROUND_DIST * (TOF_BACK_ANG/180) * PPR) / (WHEEL_DIAM * math.pi))
         if action == AvoidanceAction.BACK_LEFT:
-            car.move(-step_to_spin, 0)
+            car.move_lr(-step_to_spin, 0)
         else:
-            car.move(0, -step_to_spin)
+            car.move_lr(0, -step_to_spin)
     elif action == AvoidanceAction.TURN_LEFT or action == AvoidanceAction.TURN_RIGHT: #左輪不動右輪正轉(車體向左轉)or右輪不動左輪正轉(車體向右轉) 避障
         car.set_speed(TOF_SPEED)
         step_to_spin = int((TURN_AROUND_DIST * (TOF_TURN_ANG/180) * PPR) / (WHEEL_DIAM * math.pi))
         if action == AvoidanceAction.TURN_LEFT:
-            car.move(0, step_to_spin)
+            car.move_lr(0, step_to_spin)
         else:
-            car.move(step_to_spin, 0)
+            car.move_lr(step_to_spin, 0)
 
 def move_control(car: CarContext):
     if not car.move_needupdate:
@@ -71,9 +68,9 @@ def move_control(car: CarContext):
     stepToFollow = int((distanceToFollow * PPR) / (WHEEL_DIAM * math.pi))
     factor_left, factor_right = ctrl_dir(car.move_angual)
     try:
-        car.set_acceleration(factor_left * ACCELER, factor_right * ACCELER)
-        car.set_speed(factor_left * MAX_SPEED, factor_right * MAX_SPEED)
-        car.move(factor_left * stepToFollow, factor_right * stepToFollow)
+        car.set_acceleration_lr(factor_left * ACCELER, factor_right * ACCELER)
+        car.set_speed_lr(factor_left * MAX_SPEED, factor_right * MAX_SPEED)
+        car.move_lr(factor_left * stepToFollow, factor_right * stepToFollow)
         car.move_resetupdate()
     except ZeroDivisionError:
         pass
@@ -174,4 +171,3 @@ async def main():
 
 if __name__ == '__main__':
     asyncio.run(main())
-
