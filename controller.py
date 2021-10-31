@@ -158,9 +158,8 @@ async def main():
     car.set_acceleration(ACCELER)
     car.set_speed(MAX_SPEED)
     car.activate()
-    
-    cmd_queue = asyncio.Queue()
-    await start_server(cmd_queue)
+
+    await start_server(car)
 
     try:
         await loop(car)

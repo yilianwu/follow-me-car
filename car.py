@@ -37,6 +37,7 @@ class CarContext:
             AccelProfile(),
         )
         self.status = CarStatus.STANDBY
+        self.shutdown = False
         # Moving target
         self.__move_angual = 0
         self.__move_distance = 0
@@ -89,6 +90,8 @@ class CarContext:
         self.stp_left.stop()
         self.stp_right.stop()
         if reset:
+            self.stp_left.set_target_steps(0)
+            self.stp_right.set_target_steps(0)
             self.stp_left.set_current_steps(0)
             self.stp_right.set_current_steps(0)
 
@@ -136,3 +139,8 @@ class CarContext:
     def move_resetupdate(self):
         self.__move_needupdate = False
 
+    def move_target(self, distance, angual):
+        self.__move_angual = angual
+        self.__move_distance = distance
+        self.__move_lasttime = time.time()
+        self.__move_needupdate = True
