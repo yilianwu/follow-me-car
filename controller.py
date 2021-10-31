@@ -68,8 +68,8 @@ def move_control(car: CarContext):
     stepToFollow = int((distanceToFollow * PPR) / (WHEEL_DIAM * math.pi))
     factor_left, factor_right = ctrl_dir(car.move_angual)
     try:
-        car.set_acceleration_lr(factor_left * ACCELER, factor_right * ACCELER)
-        car.set_speed_lr(factor_left * MAX_SPEED, factor_right * MAX_SPEED)
+        car.set_acceleration_lr(factor_left * car.max_acceler, factor_right * car.max_acceler)
+        car.set_speed_lr(factor_left * car.max_speed, factor_right * car.max_speed)
         car.move_lr(factor_left * stepToFollow, factor_right * stepToFollow)
         car.move_resetupdate()
     except ZeroDivisionError:
@@ -118,11 +118,11 @@ def state_transfer(car: CarContext, bus: SMBus):
     elif old_status == CarStatus.SPINNING:
         ### 偵測人是否跑走了
         if distance > MAX_DISTANCE:
-            car.set_acceleration(ACCELER)
+            car.set_acceleration(car.max_acceler)
             return CarStatus.FOLLOWING
         ### 偵測是否跟到了
         if not (distance > STOP_DISTANCE and (angual < -SPIN_ANGUAL or angual > SPIN_ANGUAL)):
-            car.set_acceleration(ACCELER)
+            car.set_acceleration(car.max_acceler)
             car.stop()
             return CarStatus.STANDBY
 
@@ -155,8 +155,8 @@ async def loop(car: CarContext):
 
 async def main():
     car = CarContext(StepDirDriver(6, 5), StepDirDriver(24, 23))
-    car.set_acceleration(ACCELER)
-    car.set_speed(MAX_SPEED)
+    car.set_acceleration(car.max_acceler)
+    car.set_speed(car.max_speed)
     car.activate()
 
     await start_server(car)

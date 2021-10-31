@@ -36,6 +36,8 @@ class CarContext:
             right_driver,
             AccelProfile(),
         )
+        self.max_speed = MAX_SPEED
+        self.max_acceler = ACCELER
         self.status = CarStatus.STANDBY
         self.shutdown = False
         # Moving target
@@ -61,6 +63,26 @@ class CarContext:
         return self.stp_left.steps_to_go > 0 or self.stp_right.steps_to_go > 0
 
     ## Configurations
+    @property
+    def max_speed(self):
+        return self.__max_speed
+
+    @max_speed.setter
+    def max_speed(self, value):
+        if value <= 0.0:
+            raise ValueError("Speed cannot <= 0")
+        self.__max_speed = value
+
+    @property
+    def max_acceler(self):
+        return self.__max_acceler
+
+    @max_acceler.setter
+    def max_acceler(self, value):
+        if value <= 0.0:
+            raise ValueError("Acceleration cannot <= 0")
+        self.__max_acceler = value
+
     def set_acceleration(self, accel):
         self.stp_left.set_target_acceleration(accel)
         self.stp_right.set_target_acceleration(accel)

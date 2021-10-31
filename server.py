@@ -85,10 +85,10 @@ def cmd_set(car: CarContext, args):
     value = args[2]
     if name == "accel":
         val = float(value)
-        pass
+        car.max_acceler = val
     elif name == "speed":
         val = float(value)
-        pass
+        car.max_speed = val
     elif name == "motor":
         val = to_bool(value)
         pass
