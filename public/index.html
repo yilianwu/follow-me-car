@@ -8,7 +8,31 @@
 </head>
 <body>
     <main class="container">
+        <section id="slides">
+            <label for="speed">
+                Speed
+                <input id="speed" type="range" name="speed" min="100" max="3333" value="3333">
+            </label>
+        </section>
+        <section id="sticker">
+            <div id="nipplejs"></div>
+        </section>
+        <section id="buttons">
+            <div class="grid">
+                <button class="secondary">Avoid Switch</button>
+                <button class="secondary">Stop</button>
+                <button class="secondary">Motor Power</button>
+            </div>
+        </section>
     </main>
     <script src="/assets/js/nipplejs.js"></script>
+    <script>
+        var sticker = nipplejs.create({
+            zone: document.getElementById("nipplejs"),
+            mode: 'static',
+        });
+
+        var ws = new WebSocket("ws://" + location.host + "/ws");
+    </script>
 </body>
 </html>
