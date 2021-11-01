@@ -9,19 +9,19 @@
 <body>
     <main class="container">
         <section id="slides">
-            <label for="speed">
+            <label for="speed" id="speed_label">
                 Speed
-                <input id="speed" type="range" name="speed" min="100" max="3333" value="3333">
             </label>
+            <input id="speed" type="range" name="speed" min="1" max="250" value="250">
         </section>
         <section id="sticker">
             <div id="nipplejs"></div>
         </section>
         <section id="buttons">
             <div class="grid">
-                <button class="secondary">Avoid Switch</button>
-                <button class="secondary">Stop</button>
-                <button class="secondary">Motor Power</button>
+                <button class="secondary" id="avoid_btn">Avoid Switch</button>
+                <button class="secondary" id="stop_btn">Stop</button>
+                <button class="secondary" id="motor_btn">Motor Power</button>
             </div>
         </section>
     </main>
@@ -30,9 +30,109 @@
         var sticker = nipplejs.create({
             zone: document.getElementById("nipplejs"),
             mode: 'static',
+            position: {
+                left: '50%',
+                top: '50%'
+            },
         });
 
-        var ws = new WebSocket("ws://" + location.host + "/ws");
+        var max_distance = 150;
+        var state_motor = false;
+        var state_avoid = false;
+
+        window.addEventListener('load', function(e) {
+            var ws = new WebSocket("ws://" + location.host + "/ws");
+            ws.onmessage = ws_handler;
+
+            ws.send("get speed");
+            ws.send("get avoid");
+            ws.send("get motor");
+        });
+
+        function ws_handler(e) {
+            if (typeof e.data === "string") {
+                let i = e.data.indexOf(' ');
+                let splited = [s.slice(0, i), s.slice(i + 1)];
+                let statusCode = parseInt(splited[0], 10);
+                if (isNaN(statusCode)) {
+                    console.error(`Invalid response code: ${splited[0]}`);
+                }
+
+                if (statusCode == 100) {
+                    // Informative messages
+                    let pair = splited[1].split(' ');
+                    let name = pair[0];
+                    let value = pair[1];
+                    if (name == "motor") {
+                        let val = parseBool(value);
+                        if (val !== null) {
+                            state_motor = val;
+                        }
+                    } else if (name == "avoid") {
+                        let val = parseBool(value);
+                        if (val !== null) {
+                            state_avoid = val;
+                        }
+                    } else if (name == "speed") {
+                        let val = parseInt(value, 10);
+                        if (!isNaN(val)) {
+                            let slider = document.getElementById("speed");
+                            slider.value = val;
+
+                            let label = document.getElementById("speed_label");
+                            label.innerText = `Speed: ${slider.value} RPM`;
+                        }
+                    }
+                } else if (statusCode >= 400) {
+                    // Error messages
+                    console.error(`[${statusCode}] ${splited[1]}`);
+                }
+            }
+        };
+
+        document.getElementById("speed").addEventListener('input', function(e) {
+            let slider = e.target;
+            let label = document.getElementById("speed_label");
+
+            label.innerText = `Speed: ${slider.value} RPM`;
+        });
+        document.getElementById("speed").addEventListener('change', function(e) {
+            let slider = e.target;
+            ws.send(`set speed ${slider.value}`);
+        });
+        document.getElementById("avoid_btn").addEventListener('click', function(e) {
+            state_avoid = !state_avoid;
+            ws.send(`set avoid ${state_avoid}`);
+        });
+        document.getElementById("stop_btn").addEventListener('click', function(e) {
+            ws.send("stop");
+        });
+        document.getElementById("motor_btn").addEventListener('click', function(e) {
+            state_motor = !state_motor;
+            ws.send(`set motor ${state_motor}`);
+        });
+        sticker.on('move', function(e, data) {
+            let angual = data.angle.degree - 90;
+            if (angual > 180) {
+                angual = angual - 360;
+            }
+            let upward = Math.abs(Math.sin(data.angle.radian));
+            let r = data.distance / (data.instance.options.size / 2);
+            let distance = max_distance * upward * r;
+
+            ws.send(`move ${distance} ${angual}`);
+        });
+
+        function parseBool(s) {
+            if (s == "true") {
+                return true;
+            } else if (s == "false") {
+                return false;
+            } else {
+                console.error("Invalid boolean string");
+                return null;
+            }
+        }
     </script>
 </body>
 </html>

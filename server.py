@@ -75,7 +75,24 @@ def cmd_move(car: CarContext, args):
     return (200, "OK")
 
 def cmd_get(car: CarContext, args):
-    return (502, "Unimplemented")
+    if len(args) != 3:
+        return (402, "Invalid argument count")
+
+    name = args[1]
+    result = []
+    if name == "accel":
+        result.append((100, f"{name} {car.max_acceler}"))
+    elif name == "speed":
+        result.append((100, f"{name} {car.max_speed}"))
+    elif name == "motor":
+        pass
+    elif name == "avoid":
+        pass
+    else:
+        return (400, "Unknown field name")
+
+    result.append((200, "OK"))
+    return result
 
 def cmd_set(car: CarContext, args):
     if len(args) != 3:
