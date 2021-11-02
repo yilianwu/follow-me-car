@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import math
 from steppyr import StepperController, DIRECTION_CW, DIRECTION_CCW
 from steppyr.profiles.accel import AccelProfile
@@ -70,7 +71,7 @@ def move_control(car: CarContext):
     try:
         car.set_acceleration_lr(factor_left * car.max_acceler, factor_right * car.max_acceler)
         car.set_speed_lr(factor_left * car.max_speed, factor_right * car.max_speed)
-        car.move_lr(factor_left * stepToFollow, factor_right * stepToFollow)
+        car.move_lr(int(factor_left * stepToFollow), int(factor_right * stepToFollow))
         car.move_resetupdate()
     except ZeroDivisionError:
         pass
@@ -131,13 +132,7 @@ def state_transfer(car: CarContext, bus: SMBus):
 
 async def loop(car: CarContext):
     bus = SMBus(1)
-    while True:
-        try:
-            # TODO: Process command queue
-            pass
-        except:
-            pass
-
+    while not car.shutdown:
         ## 這裡負責狀態的變換以及切換時的指令
         car.status = state_transfer(car, bus)
 
@@ -161,12 +156,15 @@ async def main():
 
     await start_server(car)
 
+    logging.info("Controller initialized!")
     try:
         await loop(car)
     except KeyboardInterrupt:
         pass
 
+    logging.info("Controller shutdown...")
     car.deactivate()
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     asyncio.run(main())

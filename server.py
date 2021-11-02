@@ -3,18 +3,23 @@ import os
 from aiohttp import web, WSMsgType
 
 from car import CarContext
+from constant import *
 from utils import to_bool
 
 async def start_server(car: CarContext):
     app = web.Application()
     app.add_routes([web.get('/ws', websocket_handler),
-        web.static('/', os.path.dirname(__file__) + '/public/')])
+        web.get('/', index_handler),
+        web.static('/assets', os.path.dirname(__file__) + '/public/assets')])
     app.car = car
 
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', 8080)
     await site.start()
+
+async def index_handler(req):
+    return web.FileResponse(os.path.dirname(__file__) + '/public/index.html')
 
 async def websocket_handler(req):
     ws = web.WebSocketResponse()
@@ -25,19 +30,19 @@ async def websocket_handler(req):
             args = msg.data.split()
             result = process_cmd(req.app.car, args)
             if isinstance(result, tuple):
-                write_response(ws, result)
+                await write_response(ws, result)
             elif isinstance(result, list):
                 for r in result:
-                    write_response(ws, r)
+                    await write_response(ws, r)
             elif result is None:
-                write_response(ws, (204, "Empty"))
+                await write_response(ws, (204, "Empty"))
             else:
                 logging.error("Unknown command result type: %s", type(result))
 
     return ws
 
 async def write_response(ws, result):
-    await ws.send_str("{} {}", result[0], result[1])
+    await ws.send_str(f"{result[0]} {result[1]}")
 
 def process_cmd(car: CarContext, args):
     if len(args) == 0:
@@ -75,7 +80,7 @@ def cmd_move(car: CarContext, args):
     return (200, "OK")
 
 def cmd_get(car: CarContext, args):
-    if len(args) != 3:
+    if len(args) != 2:
         return (402, "Invalid argument count")
 
     name = args[1]
@@ -83,7 +88,8 @@ def cmd_get(car: CarContext, args):
     if name == "accel":
         result.append((100, f"{name} {car.max_acceler}"))
     elif name == "speed":
-        result.append((100, f"{name} {car.max_speed}"))
+        val = car.max_speed * 60 / PPR;
+        result.append((100, f"{name} {val}"))
     elif name == "motor":
         pass
     elif name == "avoid":
@@ -105,7 +111,7 @@ def cmd_set(car: CarContext, args):
         car.max_acceler = val
     elif name == "speed":
         val = float(value)
-        car.max_speed = val
+        car.max_speed = val * PPR / 60
     elif name == "motor":
         val = to_bool(value)
         pass
