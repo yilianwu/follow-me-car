@@ -2,6 +2,7 @@ from enum import Enum
 import logging
 import time
 
+import RPi.GPIO as GPIO
 from steppyr import StepperController, DIRECTION_CW, DIRECTION_CCW
 from steppyr.profiles.accel import AccelProfile
 from steppyr.drivers import Driver
@@ -28,7 +29,7 @@ class CarStatus(Enum):
             return "Unknown"
 
 class CarContext:
-    def __init__(self, left_driver: Driver, right_driver: Driver):
+    def __init__(self, left_driver: Driver, right_driver: Driver, enable_pin=None):
         self.stp_left = StepperController(
             left_driver,
             AccelProfile(),
@@ -41,7 +42,12 @@ class CarContext:
         self.max_acceler = ACCELER
         self.status = CarStatus.STANDBY
         self.shutdown = False
+        self.enable_pin = enable_pin
+        if self.enable_pin is not None:
+            GPIO.setmode(GPIO.BCM)
+            GPIO.setup(self.enable_pin, GPIO.OUT)
         self.avoid_state = True
+        self.motor_state = True
         # Moving target
         self.__move_angual = 0
         self.__move_distance = 0
@@ -69,6 +75,21 @@ class CarContext:
         return self.stp_left.steps_to_go > 0 or self.stp_right.steps_to_go > 0
 
     ## Configurations
+    @property
+    def motor_state(self):
+        return self.__motor_state
+
+    @motor_state.setter
+    def motor_state(self, value):
+        if value == True:
+            if self.enable_pin is not None:
+                GPIO.output(self.enable_pin, GPIO.HIGH)
+            self.__motor_state = True
+        elif value == False:
+            if self.enable_pin is not None:
+                GPIO.output(self.enable_pin, GPIO.LOW)
+            self.__motor_state = False
+
     @property
     def max_speed(self):
         return self.__max_speed

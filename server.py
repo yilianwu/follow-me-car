@@ -106,7 +106,7 @@ def cmd_get(car: CarContext, args):
         val = car.max_speed * 60 / PPR;
         result.append((100, f"{name} {val}"))
     elif name == "motor":
-        pass
+        result.append((100, f"{name} {car.motor_state}"))
     elif name == "avoid":
         result.append((100, f"{name} {car.avoid_state}"))
     else:
@@ -129,7 +129,7 @@ def cmd_set(car: CarContext, args):
         car.max_speed = val * PPR / 60
     elif name == "motor":
         val = to_bool(value)
-        pass
+        car.motor_state = val
     elif name == "avoid":
         val = to_bool(value)
         car.avoid_state = val

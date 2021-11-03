@@ -151,7 +151,7 @@ async def loop(car: CarContext):
         await asyncio.sleep(0)
 
 async def main():
-    car = CarContext(StepDirDriver(6, 5), StepDirDriver(24, 23))
+    car = CarContext(StepDirDriver(6, 5), StepDirDriver(24, 23), 25)
     car.set_acceleration(car.max_acceler)
     car.set_speed(car.max_speed)
     car.activate()
@@ -168,6 +168,7 @@ async def main():
     await site.stop()
     await runner.cleanup()
     car.deactivate()
+    GPIO.cleanup()
     logging.info("Car deactivated!")
 
 if __name__ == '__main__':
