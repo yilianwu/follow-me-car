@@ -1,6 +1,7 @@
 import logging
 import os
-from aiohttp import web, WSMsgType
+import weakref
+from aiohttp import web, WSMsgType, WSCloseCode
 
 from car import CarContext
 from constant import *
@@ -11,12 +12,15 @@ async def start_server(car: CarContext):
     app.add_routes([web.get('/ws', websocket_handler),
         web.get('/', index_handler),
         web.static('/assets', os.path.dirname(__file__) + '/public/assets')])
-    app.car = car
+    app['car'] = car
+    app['websockets'] = weakref.WeakSet()
+    app.on_shutdown.append(on_shutdown)
 
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', 8080)
     await site.start()
+    return (site, runner)
 
 async def index_handler(req):
     return web.FileResponse(os.path.dirname(__file__) + '/public/index.html')
@@ -24,23 +28,33 @@ async def index_handler(req):
 async def websocket_handler(req):
     ws = web.WebSocketResponse()
     await ws.prepare(req)
+    logging.info(f"New client connected: {req.remote}")
+    req.app['websockets'].add(ws)
 
-    async for msg in ws:
-        if msg.type == WSMsgType.TEXT:
-            args = msg.data.split()
-            logging.debug(args)
-            result = process_cmd(req.app.car, args)
-            if isinstance(result, tuple):
-                await write_response(ws, result)
-            elif isinstance(result, list):
-                for r in result:
-                    await write_response(ws, r)
-            elif result is None:
-                await write_response(ws, (204, "Empty"))
-            else:
-                logging.error("Unknown command result type: %s", type(result))
+    try:
+        async for msg in ws:
+            if msg.type == WSMsgType.TEXT:
+                args = msg.data.split()
+                logging.debug(args)
+                result = process_cmd(req.app['car'], args)
+                if isinstance(result, tuple):
+                    await write_response(ws, result)
+                elif isinstance(result, list):
+                    for r in result:
+                        await write_response(ws, r)
+                elif result is None:
+                    await write_response(ws, (204, "Empty"))
+                else:
+                    logging.error("Unknown command result type: %s", type(result))
+    finally:
+        req.app['websockets'].discard(ws)
 
     return ws
+
+async def on_shutdown(app):
+    logging.info("Closing all websockets...")
+    for ws in set(app['websockets']):
+        await ws.close(code=WSCloseCode.GOING_AWAY, message='Server shutdown')
 
 async def write_response(ws, result):
     await ws.send_str(f"{result[0]} {result[1]}")

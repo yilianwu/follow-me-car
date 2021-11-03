@@ -1,4 +1,5 @@
 from enum import Enum
+import logging
 import time
 
 from steppyr import StepperController, DIRECTION_CW, DIRECTION_CCW
@@ -55,9 +56,13 @@ class CarContext:
 
     def deactivate(self):
         self.stp_left.shutdown()
+        logging.debug("Left motor shutdown!")
         self.stp_right.shutdown()
+        logging.debug("Right motor shutdown!")
         self.stp_left.terminate()
+        logging.debug("Left motor terminated!")
         self.stp_right.terminate()
+        logging.debug("Right motor terminated!")
 
     ## Status
     def has_steps_to_go(self):

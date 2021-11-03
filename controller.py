@@ -1,6 +1,7 @@
 import asyncio
 import logging
 import math
+import os
 from steppyr import StepperController, DIRECTION_CW, DIRECTION_CCW
 from steppyr.profiles.accel import AccelProfile
 from steppyr.drivers.stepdir import StepDirDriver
@@ -155,7 +156,7 @@ async def main():
     car.set_speed(car.max_speed)
     car.activate()
 
-    await start_server(car)
+    site, runner = await start_server(car)
 
     logging.info("Controller initialized!")
     try:
@@ -164,8 +165,12 @@ async def main():
         pass
 
     logging.info("Controller shutdown...")
+    await site.stop()
+    await runner.cleanup()
     car.deactivate()
+    logging.info("Car deactivated!")
 
 if __name__ == '__main__':
-    logging.basicConfig(level=logging.INFO)
+    loglevel = os.environ.get('LOGLEVEL', 'INFO').upper()
+    logging.basicConfig(level=loglevel)
     asyncio.run(main())
