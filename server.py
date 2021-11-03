@@ -28,6 +28,7 @@ async def websocket_handler(req):
     async for msg in ws:
         if msg.type == WSMsgType.TEXT:
             args = msg.data.split()
+            logging.debug(args)
             result = process_cmd(req.app.car, args)
             if isinstance(result, tuple):
                 await write_response(ws, result)
@@ -93,7 +94,7 @@ def cmd_get(car: CarContext, args):
     elif name == "motor":
         pass
     elif name == "avoid":
-        pass
+        result.append((100, f"{name} {car.avoid_state}"))
     else:
         return (400, "Unknown field name")
 
@@ -117,7 +118,7 @@ def cmd_set(car: CarContext, args):
         pass
     elif name == "avoid":
         val = to_bool(value)
-        pass
+        car.avoid_state = val
     else:
         return (400, "Unknown field name")
     return (200, "OK")

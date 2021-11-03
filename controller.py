@@ -96,22 +96,23 @@ def state_transfer(car: CarContext, bus: SMBus):
             return CarStatus.STANDBY
 
         ### 避障部份
-        avoid_action = AvoidanceAction.NORMAL
-        try:
-            if car.has_steps_to_go(): #左右馬達還在執行
-                tofdis_L = read_filtered_distance(bus, TOF_L_I2C_ADDRESS)
-                tofdis_FL = read_filtered_distance(bus, TOF_FL_I2C_ADDRESS)
-                tofdis_ML = read_filtered_distance(bus, TOF_ML_I2C_ADDRESS)
-                tofdis_MR = read_filtered_distance(bus, TOF_MR_I2C_ADDRESS)
-                tofdis_FR = read_filtered_distance(bus, TOF_FR_I2C_ADDRESS)
-                tofdis_R = read_filtered_distance(bus, TOF_R_I2C_ADDRESS)
-                avoid_action = tof10120_judgment(tofdis_L, tofdis_FL, tofdis_ML, tofdis_MR, tofdis_FR, tofdis_R, car.stp_left.current_speed, car.stp_right.current_speed)
-        except:
-            pass
+        if car.avoid_state:
+            avoid_action = AvoidanceAction.NORMAL
+            try:
+                if car.has_steps_to_go(): #左右馬達還在執行
+                    tofdis_L = read_filtered_distance(bus, TOF_L_I2C_ADDRESS)
+                    tofdis_FL = read_filtered_distance(bus, TOF_FL_I2C_ADDRESS)
+                    tofdis_ML = read_filtered_distance(bus, TOF_ML_I2C_ADDRESS)
+                    tofdis_MR = read_filtered_distance(bus, TOF_MR_I2C_ADDRESS)
+                    tofdis_FR = read_filtered_distance(bus, TOF_FR_I2C_ADDRESS)
+                    tofdis_R = read_filtered_distance(bus, TOF_R_I2C_ADDRESS)
+                    avoid_action = tof10120_judgment(tofdis_L, tofdis_FL, tofdis_ML, tofdis_MR, tofdis_FR, tofdis_R, car.stp_left.current_speed, car.stp_right.current_speed)
+            except:
+                pass
 
-        if avoid_action != AvoidanceAction.NORMAL:
-            tof_avoid_control(car, avoid_action)
-            return CarStatus.AVOID
+            if avoid_action != AvoidanceAction.NORMAL:
+                tof_avoid_control(car, avoid_action)
+                return CarStatus.AVOID
     elif old_status == CarStatus.AVOID:
         ### 確認是否Avoidance完畢
         if not car.has_steps_to_go(): #左右馬達執行完畢

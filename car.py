@@ -40,6 +40,7 @@ class CarContext:
         self.max_acceler = ACCELER
         self.status = CarStatus.STANDBY
         self.shutdown = False
+        self.avoid_state = True
         # Moving target
         self.__move_angual = 0
         self.__move_distance = 0
