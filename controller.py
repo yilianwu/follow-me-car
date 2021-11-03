@@ -68,11 +68,22 @@ def move_control(car: CarContext):
 
     distanceToFollow = car.move_distance - MIN_DISTANCE
     stepToFollow = int((distanceToFollow * PPR) / (WHEEL_DIAM * math.pi))
-    factor_left, factor_right = ctrl_dir(car.move_angual)
+
+    # Convert angual to move back
+    back_factor = 1
+    angual = car.move_angual
+    if angual > 90:
+        angual = 180 - angual
+        back_factor = -1
+    if angual < -90:
+        angual = -180 - angual
+        back_factor = -1
+    factor_left, factor_right = ctrl_dir(angual)
+
     try:
         car.set_acceleration_lr(factor_left * car.max_acceler, factor_right * car.max_acceler)
         car.set_speed_lr(factor_left * car.max_speed, factor_right * car.max_speed)
-        car.move_lr(int(factor_left * stepToFollow), int(factor_right * stepToFollow))
+        car.move_lr(int(back_factor * factor_left * stepToFollow), int(back_factor * factor_right * stepToFollow))
         car.move_resetupdate()
     except ZeroDivisionError:
         pass
