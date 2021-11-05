@@ -122,6 +122,9 @@
 
             ws.send(`move ${distance} ${angual}`);
         });
+        sticker.on('end', function(e, data) {
+            ws.send(`move 0 0`);
+        });
 
         function setAvoidState(value) {
             let btn = document.getElementById("avoid_btn");
