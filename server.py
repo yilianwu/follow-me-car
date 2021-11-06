@@ -109,6 +109,8 @@ def cmd_get(car: CarContext, args):
         result.append((100, f"{name} {car.motor_state}"))
     elif name == "avoid":
         result.append((100, f"{name} {car.avoid_state}"))
+    elif name == "status":
+        result.append((100, f"{name} {car.status}"))
     else:
         return (400, "Unknown field name")
 
