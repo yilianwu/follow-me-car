@@ -99,7 +99,7 @@ def state_transfer(car: CarContext, bus: SMBus):
             return CarStatus.FOLLOWING
         ### 偵測是否跟隨方向
         if distance > STOP_DISTANCE and (angual < -SPIN_ANGUAL or angual > SPIN_ANGUAL):
-            car.set_acceleration(SPIN_ACCELER)
+            car.set_acceleration(car.max_acceler * SPIN_ACCELER_COEFFICIENT)
             return CarStatus.SPINNING
     elif old_status == CarStatus.FOLLOWING:
         ### 偵測是否停下
@@ -158,13 +158,11 @@ async def loop(car: CarContext):
             #左右馬達還在執行
             await asyncio.sleep(0.001) #再給他一點時間
         elif car.status == CarStatus.SPINNING:
-            car.spin_around(car.move_angual, SPIN_SPEED)
+            car.spin_around(car.move_angual, car.max_speed * SPIN_SPEED_COEFFICIENT)
         await asyncio.sleep(0)
 
 async def main():
     car = CarContext(StepDirDriver(6, 5), StepDirDriver(24, 23), 25)
-    car.set_acceleration(car.max_acceler)
-    car.set_speed(car.max_speed)
     car.activate()
 
     site, runner = await start_server(car)
