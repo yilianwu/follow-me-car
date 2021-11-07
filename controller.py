@@ -2,6 +2,7 @@ import asyncio
 import logging
 import math
 import os
+import signal
 from steppyr import StepperController, DIRECTION_CW, DIRECTION_CCW
 from steppyr.profiles.accel import AccelProfile
 from steppyr.drivers.stepdir import StepDirDriver
@@ -161,9 +162,17 @@ async def loop(car: CarContext):
             car.spin_around(car.move_angual, car.max_speed * SPIN_SPEED_COEFFICIENT)
         await asyncio.sleep(0)
 
+async def sig_handler(signame, car):
+    car.shutdown = True
+
 async def main():
     car = CarContext(StepDirDriver(6, 5), StepDirDriver(24, 23), 25)
     car.activate()
+
+    event_loop = asyncio.get_event_loop()
+    for signame in ('SIGINT', 'SIGTERM'):
+        event_loop.add_signal_handler(getattr(signal, signame),
+                lambda signame=signame: asyncio.create_task(sig_handler(signame, car)))
 
     site, runner = await start_server(car)
 
