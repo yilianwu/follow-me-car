@@ -37,16 +37,25 @@
             size: 200,
         });
 
+        /** Configuration Constants **/
+        const PERIODICALLY_MOVE_TIME = 500;
+        const MAX_DISTANCE = 150;
+        const MIN_DISTANCE = 85;
+
+        /** Runtime Variables **/
         var ws = new WebSocket("ws://" + location.host + "/ws");
-        var max_distance = 150;
-        var min_distance = 85;
         var state_motor = false;
         var state_avoid = false;
+        var last_distance = 0;
+        var last_angual = 0;
+        var last_move_time = 0;
 
         ws.onopen = function() {
             ws.send("get speed");
             ws.send("get avoid");
             ws.send("get motor");
+
+            setInterval(send_move_periodically, PERIODICALLY_MOVE_TIME);
         }
 
         ws.onmessage = function(e) {
@@ -121,13 +130,28 @@
             let r = data.distance / (data.instance.options.size / 2);
             // Since our controller has a safe minimum distance,
             // we have to let the distance larger than that value.
-            let distance = Math.max(max_distance * upward * r, min_distance);
+            let distance = Math.max(MAX_DISTANCE * upward * r, MIN_DISTANCE);
+
+            last_distance = distance;
+            last_angual = angual;
+            last_move_time = Date.now();
 
             ws.send(`move ${distance} ${angual}`);
         });
         sticker.on('end', function(e, data) {
+            // DO NOT modify last_distance & last_angual to other value than 0!!
+            last_distance = 0;
+            last_angual = 0;
+            last_move_time = Date.now();
+
             ws.send(`move 0 0`);
         });
+
+        function send_move_periodically() {
+            if ((last_distance > 0) && (Date.now() - last_move_time >= PERIODICALLY_MOVE_TIME)) {
+                ws.send(`move ${last_distance} ${last_angual}`);
+            }
+        }
 
         function setAvoidState(value) {
             let btn = document.getElementById("avoid_btn");
